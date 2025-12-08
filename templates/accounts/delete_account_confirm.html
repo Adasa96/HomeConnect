@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="card shadow-sm p-4">
+    <h4>Confirm Account Deletion</h4>
+    <p class="text-danger">
+      This action is permanent. Your profile and all requests will be deleted.
+    </p>
+
+    <form method="post">
+      {% csrf_token %}
+      <button class="btn btn-danger">Yes, Delete My Account</button>
+      <a href="{% url 'accounts:profile' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

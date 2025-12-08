@@ -1,0 +1,11 @@
+<h1>My Service Requests</h1>
+<a href="{% url 'services:create_request' %}">Create New Request</a>
+<ul>
+  {% for req in requests %}
+    <li>
+      <a href="{% url 'services:request_detail' req.pk %}">{{ req.service }}</a>
+      <a href="{% url 'services:update_request' req.pk %}">Edit</a>
+      <a href="{% url 'services:delete_request' req.pk %}">Delete</a>
+    </li>
+  {% endfor %}
+</ul>

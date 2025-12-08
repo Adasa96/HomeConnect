@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ provider.company_name|default:provider.user.username }}{% endblock %}
+
+{% block content %}
+  <div class="row mb-3">
+    <div class="col-md-12">
+      <!-- CRUD BUTTONS -->
+      <a href="{% url 'services:provider_update' provider.pk %}" class="btn btn-primary btn-sm">Edit Profile</a>
+      <a href="{% url 'services:provider_delete' provider.pk %}" class="btn btn-danger btn-sm">Delete Profile</a>
+      <a href="{% url 'services:providers' %}" class="btn btn-secondary btn-sm">Back to Providers</a>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-8">
+      <h2>{{ provider.company_name|default:provider.user.username }}</h2>
+      <p>{{ provider.bio }}</p>
+      <p><strong>Contact:</strong> {{ provider.phone }}</p>
+      <p>
+        <strong>Services:</strong>
+        {% for s in provider.services.all %}
+          <span class="badge bg-secondary">{{ s.name }}</span>
+        {% empty %}
+          <em>No services listed</em>
+        {% endfor %}
+      </p>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Request Service</h5>
+          {% if user.is_authenticated %}
+            <form method="post">
+              {% csrf_token %}
+              {{ form.as_p }}
+              <button class="btn btn-primary" type="submit">Send Request</button>
+            </form>
+          {% else %}
+            <p>
+              Please <a href="{% url 'accounts:login' %}">login</a> to request a service.
+            </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

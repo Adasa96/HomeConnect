@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Provider Dashboard{% endblock %}
+
+{% block content %}
+<h1>Provider Dashboard</h1>
+
+<a href="{% url 'accounts:provider_showcase' %}" class="btn btn-info mb-3">
+    Showcase My Skills
+</a>
+
+<p>Welcome, {{ provider.company_name|default:provider.user.username }}</p>
+
+<h3>Incoming Requests</h3>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Homeowner</th>
+            <th>Service</th>
+            <th>Details</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for r in requests %}
+        <tr>
+            <td>{{ r.id }}</td>
+            <td>{{ r.homeowner.username }}</td>
+            <td>{{ r.service.name }}</td>
+            <td>{{ r.details|truncatechars:80 }}</td>
+            <td>{{ r.get_status_display }}</td>
+
+            <td>
+                <form method="post" action="{% url 'services:request_action' r.pk %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button name="action" value="accept" class="btn btn-sm btn-success">Accept</button>
+                </form>
+
+                <form method="post" action="{% url 'services:request_action' r.pk %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button name="action" value="complete" class="btn btn-sm btn-primary">Complete</button>
+                </form>
+
+                <form method="post" action="{% url 'services:request_action' r.pk %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button name="action" value="cancel" class="btn btn-sm btn-danger">Cancel</button>
+                </form>
+            </td>
+        </tr>
+
+        {% empty %}
+        <tr>
+            <td colspan="6">No requests yet.</td>
+        </tr>
+
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}
+
+

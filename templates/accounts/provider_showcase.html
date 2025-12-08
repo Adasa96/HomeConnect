@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block title %}Showcase My Skills{% endblock %}
+
+{% block content %}
+<h1>Showcase My Skills</h1>
+
+<p><strong>Provider:</strong> {{ provider.company_name|default:provider.user.username }}</p>
+
+<form method="POST">
+    {% csrf_token %}
+    <div class="form-group">
+        <label for="skills">Describe Your Skills & Experience</label>
+        {{ form.skills }}
+    </div>
+
+    <button class="btn btn-primary mt-3">Save</button>
+</form>
+
+{% endblock %}

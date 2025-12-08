@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}Service Providers{% endblock %}
+
+{% block content %}
+  <h1>Service Providers</h1>
+  <div class="row">
+    {% for p in providers %}
+      <div class="col-md-4 mb-3">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title">{{ p.company_name|default:p.user.username }}</h5>
+            <p class="card-text">{{ p.user.bio|truncatechars:120 }}</p>
+            <p>
+              <strong>Services:</strong>
+              {% for s in p.user.services.all %}
+                <span class="badge bg-secondary">{{ s.name }}</span>
+              {% empty %}
+                <em>No services listed</em>
+              {% endfor %}
+            </p>
+            <a href="{% url 'services:provider_detail' p.pk %}" class="btn btn-outline-primary">View</a>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <p>No providers yet.</p>
+    {% endfor %}
+  </div>
+{% endblock %}

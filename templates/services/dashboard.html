@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Services Dashboard{% endblock %}
+
+{% block content %}
+<div class="p-4 mb-4 bg-light rounded-3">
+  <div class="container-fluid py-2">
+    <h1 class="display-6">Services Dashboard</h1>
+    <p class="lead">Welcome, {{ user.username }}!</p>
+    <hr>
+    <div class="d-flex gap-2">
+      <a href="{% url 'services:providers' %}" class="btn btn-primary">Browse Providers</a>
+      <a href="{% url 'services:dashboard' %}" class="btn btn-outline-secondary">My Requests</a>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-8">
+    <h3>My Service Requests</h3>
+    {% if requests %}
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Service</th>
+            <th>Provider</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in requests %}
+          <tr>
+            <td><a href="{% url 'services:request_detail' req.pk %}">{{ req.service }}</a></td>
+            <td>{{ req.provider.company_name }}</td>
+            <td>{{ req.status }}</td>
+            <td>
+              {% if req.status == 'Pending' %}
+                <a href="{% url 'services:update_request' req.pk %}" class="btn btn-sm btn-warning">Edit</a>
+                <a href="{% url 'services:delete_request' req.pk %}" class="btn btn-sm btn-danger">Delete</a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="text-muted">You have no service requests yet. Browse providers to create one!</p>
+    {% endif %}
+  </div>
+
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Tips</h5>
+        <p class="card-text">Complete your profile and list the services you're interested in to get better matches.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

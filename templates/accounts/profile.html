@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Profile — HomeConnect{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+
+    <!-- HEADER BUTTONS -->
+    <div class="mb-3 d-flex justify-content-between">
+      <a href="{% url 'services:dashboard' %}" class="btn btn-secondary btn-sm">
+        ← Back to Dashboard
+      </a>
+      <a href="{% url 'accounts:delete_account' %}" class="btn btn-danger btn-sm"
+         onclick="return confirm('Are you sure you want to delete your account? This action is permanent.');">
+        Delete Account
+      </a>
+    </div>
+
+    <div class="card mb-3">
+      <div class="row g-0">
+
+        <!-- PROFILE IMAGE -->
+        <div class="col-md-4 d-flex align-items-center justify-content-center p-3">
+          {% if user.profile_image %}
+            <img src="{{ user.profile_image.url }}" class="img-fluid rounded"
+                 alt="Profile image" style="max-height: 160px; object-fit: cover;">
+          {% else %}
+            <img src="{% static 'img/default_avatar.svg' %}" class="img-fluid rounded"
+                 alt="Default avatar" style="width:140px;height:140px;object-fit:cover;">
+          {% endif %}
+        </div>
+
+        <!-- PROFILE FORM -->
+        <div class="col-md-8">
+          <div class="card-body">
+            <h4 class="card-title">Your Profile</h4>
+            <form method="post" enctype="multipart/form-data">
+              {% csrf_token %}
+              {{ form.as_p }}
+
+              <div class="d-flex mt-3">
+                <button type="submit" class="btn btn-success me-2">Save</button>
+                <a href="{% url 'services:dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+              </div>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

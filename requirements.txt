@@ -1,0 +1,4 @@
+pillow
+cloudinary
+django
+python-decouple

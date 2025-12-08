@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Service Request{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h3 class="card-title mb-3 text-danger">Delete Request</h3>
+      <p>Are you sure you want to delete the service request for <strong>{{ request_obj.service }}</strong>?</p>
+
+      <form method="post" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Yes, Delete</button>
+      </form>
+      <a href="{% url 'services:dashboard' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
