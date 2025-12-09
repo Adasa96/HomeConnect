@@ -25,7 +25,14 @@ SECRET_KEY = 'django-insecure-%9=*6ho^t9yzjexfjt_-rp!q=0@j-#u+j+wt6bc)2@wm=p_9ra
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "9875a57c7fd5.ngrok-free.app", 
+]
+CSRF_TRUSTED_ORIGINS = [
+    "https://*.ngrok-free.app",
+]
 
 
 # Application definition
@@ -42,6 +49,7 @@ INSTALLED_APPS = [
     'connectmpesa',
     'booking',
     'cloudinary',
+    'widget_tweaks',
 ]
 
 # register our custom user model
@@ -128,7 +136,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
-STATICFILES_DIRS = [BASE_DIR / 'templates' / 'static']
+STATICFILES_DIRS = [BASE_DIR / 'static']
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -138,3 +146,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Media files (user-uploaded)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# MPESA SETTINGS
+MPESA_ENV = "sandbox"   # change to 'production' when live
+MPESA_CONSUMER_KEY = "your_consumer_key"
+MPESA_CONSUMER_SECRET = "your_consumer_secret"
+
+MPESA_SHORTCODE = "174379"   # Test paybill
+MPESA_PASSKEY = "your_passkey"
+
+MPESA_CALLBACK_URL = "https://yourdomain.com/mpesa/callback/"
+

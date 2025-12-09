@@ -1,14 +1,50 @@
 {% extends 'base.html' %}
 
-{% block content %}
-<div class="container mt-4">
-    <h3>Edit Provider Profile</h3>
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        {{ form.as_p }}
+{% block title %}Edit Provider Profile — HomeConnect{% endblock %}
 
-        <button class="btn btn-success" type="submit">Save Changes</button>
-        <a href="{% url 'services:provider_detail' provider.pk %}" class="btn btn-secondary">Cancel</a>
-    </form>
+{% block content %}
+<div class="container mt-5">
+    <div class="card shadow-sm p-4">
+        <h2>Edit Service Provider Profile</h2>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+
+            <!-- Company Name -->
+            <div class="mb-3">
+                {{ form.company_name.label_tag }}
+                {{ form.company_name }}
+            </div>
+
+            <!-- Skills -->
+            <div class="mb-3">
+                {{ form.skills.label_tag }}
+                {{ form.skills }}
+            </div>
+
+            <!-- Experience -->
+            <div class="mb-3">
+                {{ form.experience_years.label_tag }}
+                {{ form.experience_years }}
+            </div>
+
+            <!-- Portfolio Image -->
+            <div class="mb-3">
+                {{ form.portfolio_image.label_tag }}
+                {{ form.portfolio_image }}
+            </div>
+
+            <!-- Services -->
+            <div class="mb-3">
+                {{ form.services.label_tag }}
+                {{ form.services }}
+            </div>
+
+            <button type="submit" class="btn btn-success">Save Changes</button>
+            <a href="{% url 'accounts:provider_detail' provider.pk %}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
 </div>
 {% endblock %}
+

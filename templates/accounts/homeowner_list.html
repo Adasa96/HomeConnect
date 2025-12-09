@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Homeowners — HomeConnect{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Homeowners</h1>
+
+<div class="row">
+    {% for h in homeowners %}
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 shadow-sm">
+                {% if h.profile_image %}
+                    <img src="{{ h.profile_image.url }}" class="card-img-top" alt="{{ h.username }}">
+                {% endif %}
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">{{ h.username }}</h5>
+                    <p class="card-text">{{ h.bio|truncatechars:120 }}</p>
+                    <p>
+                        <strong>Requested Services:</strong>
+                        {% if h.services.exists %}
+                            {% for s in h.services.all %}
+                                <span class="badge bg-secondary">{{ s.name }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <em>No services selected</em>
+                        {% endif %}
+                    </p>
+                    <a href="{% url 'accounts:homeowner_detail' h.pk %}" class="btn btn-outline-primary mt-auto">View Profile</a>
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="col-12">
+            <p class="text-muted">No homeowners available.</p>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

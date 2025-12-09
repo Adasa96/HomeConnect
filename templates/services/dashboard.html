@@ -10,13 +10,25 @@
     <hr>
     <div class="d-flex gap-2">
       <a href="{% url 'services:providers' %}" class="btn btn-primary">Browse Providers</a>
-      <a href="{% url 'services:dashboard' %}" class="btn btn-outline-secondary">My Requests</a>
+      {% if user.user_type == 'service_provider' %}
+        <a href="{% url 'services:provider_dashboard' %}" class="btn btn-outline-secondary">My Requests</a>
+      {% endif %}
     </div>
   </div>
 </div>
 
 <div class="row">
   <div class="col-md-8">
+    {% if user.user_type == 'homeowner' %}
+      <h3>Create a New Service Request</h3>
+      <form method="post" class="mb-4">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">Send Request</button>
+      </form>
+      <hr>
+    {% endif %}
+
     <h3>My Service Requests</h3>
     {% if requests %}
       <table class="table table-striped">
@@ -31,13 +43,28 @@
         <tbody>
           {% for req in requests %}
           <tr>
-            <td><a href="{% url 'services:request_detail' req.pk %}">{{ req.service }}</a></td>
-            <td>{{ req.provider.company_name }}</td>
-            <td>{{ req.status }}</td>
+            <td>{{ req.service.name }}</td>
+            <td>{{ req.provider.company_name|default:req.provider.user.username }}</td>
+            <td>{{ req.status|capfirst }}</td>
             <td>
-              {% if req.status == 'Pending' %}
+              {% if req.homeowner == user and req.status == 'pending' %}
                 <a href="{% url 'services:update_request' req.pk %}" class="btn btn-sm btn-warning">Edit</a>
                 <a href="{% url 'services:delete_request' req.pk %}" class="btn btn-sm btn-danger">Delete</a>
+              {% endif %}
+
+              {% if user.user_type == 'service_provider' %}
+                {% if req.status == 'pending' %}
+                  <form action="{% url 'services:request_action' req.pk %}" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" name="action" value="accept" class="btn btn-sm btn-success">Accept</button>
+                    <button type="submit" name="action" value="cancel" class="btn btn-sm btn-danger">Cancel</button>
+                  </form>
+                {% elif req.status == 'accepted' %}
+                  <form action="{% url 'services:request_action' req.pk %}" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" name="action" value="complete" class="btn btn-sm btn-primary">Complete</button>
+                  </form>
+                {% endif %}
               {% endif %}
             </td>
           </tr>
@@ -54,9 +81,13 @@
       <div class="card-body">
         <h5 class="card-title">Tips</h5>
         <p class="card-text">Complete your profile and list the services you're interested in to get better matches.</p>
+
+        {% if user.user_type == 'homeowner' %}
+          <a href="{% url 'services:providers' %}" class="btn btn-sm btn-primary mt-2">Browse Providers</a>
+          <a href="{% url 'connectmpesa:start_payment' %}" class="btn btn-sm btn-success mt-2">Make Payment</a>
+        {% endif %}
       </div>
     </div>
   </div>
 </div>
 {% endblock %}
-

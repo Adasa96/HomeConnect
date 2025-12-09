@@ -3,115 +3,84 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
-from .models import ServiceProvider
+
+from .models import ServiceProvider, User, Service
+from services.models import Service
 
 User = get_user_model()
 
-# Basic phone validator: allow optional + and 9-15 digits
+# ----------------------------------------
+# PHONE VALIDATOR
+# ----------------------------------------
 phone_validator = RegexValidator(
     regex=r'^\+?\d{9,15}$',
-    message='Enter a valid phone number (digits only, optional leading +, 9 to 15 digits)'
+    message='Enter a valid phone number (9–15 digits, optional +).'
 )
 
+
+# ------------------------------------------------
 # LOGIN FORM
+# ------------------------------------------------
 class UserLoginForm(AuthenticationForm):
     username = forms.CharField(widget=forms.TextInput(attrs={
         'class': 'form-control',
         'placeholder': 'Username'
     }))
-
     password = forms.CharField(widget=forms.PasswordInput(attrs={
         'class': 'form-control',
         'placeholder': 'Password'
     }))
 
 
-# REGISTRATION FORM
+# ------------------------------------------------
+# USER REGISTRATION FORM
+# ------------------------------------------------
 class UserRegistrationForm(forms.ModelForm):
     phone = forms.CharField(
         required=False,
         validators=[phone_validator],
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Phone (e.g. 2547XXXXXXXX)'
-        })
-    )
-    password1 = forms.CharField(
-        label='Password',
-        widget=forms.PasswordInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Enter password'
-        })
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '2547XXXXXXXX'})
     )
 
-    password2 = forms.CharField(
-        label='Confirm Password',
-        widget=forms.PasswordInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Confirm password'
-        })
-    )
+    password1 = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}))
+    password2 = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}))
 
     USER_TYPES = [
         ('homeowner', 'Homeowner'),
         ('service_provider', 'Service Provider'),
     ]
-
-    user_type = forms.ChoiceField(
-        choices=USER_TYPES,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
+    user_type = forms.ChoiceField(choices=USER_TYPES, widget=forms.Select(attrs={'class': 'form-control'}))
 
     class Meta:
         model = User
         fields = ('username', 'email', 'phone', 'location', 'city', 'user_type', 'bio', 'profile_image')
 
         widgets = {
-            'username': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Choose a username'
-            }),
-            'email': forms.EmailInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Enter your email'
-            }),
-            'bio': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3,
-                'placeholder': 'Short description about you (optional)'
-            }),
+            'username': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'bio': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'location': forms.TextInput(attrs={'class': 'form-control'}),
+            'city': forms.TextInput(attrs={'class': 'form-control'}),
             'profile_image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
-            'phone': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Phone (e.g. 2547XXXXXXXX)'
-            }),
-            'location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Street or address (optional)'}),
-            'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'City (optional)'}),
         }
 
-    # Validate matching passwords
     def clean(self):
         cleaned_data = super().clean()
-        p1 = cleaned_data.get("password1")
-        p2 = cleaned_data.get("password2")
-
-        if p1 and p2 and p1 != p2:
+        if cleaned_data.get("password1") != cleaned_data.get("password2"):
             raise ValidationError("Passwords do not match.")
-
         return cleaned_data
 
-    # Save user and set password properly
     def save(self, commit=True):
         user = super().save(commit=False)
         user.set_password(self.cleaned_data['password1'])
-
         if commit:
             user.save()
         return user
 
 
-
-# PROFILE UPDATE FORM
+# ------------------------------------------------
+# USER PROFILE UPDATE FORM
+# ------------------------------------------------
 class UserProfileForm(forms.ModelForm):
     class Meta:
         model = User
@@ -120,39 +89,16 @@ class UserProfileForm(forms.ModelForm):
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'location': forms.TextInput(attrs={'class': 'form-control'}),
+            'city': forms.TextInput(attrs={'class': 'form-control'}),
             'bio': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'phone': forms.TextInput(attrs={'class': 'form-control'}),
-            'location': forms.TextInput(attrs={'class': 'form-control'}),
-            'city': forms.TextInput(attrs={'class': 'form-control'}),
         }
-class UserUpdateForm(forms.ModelForm):
-    class Meta:
-        model = User
-        fields = ['username', 'email']   # Add more fields if your User model has them
-        widgets = {
-            'username': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Enter username'
-            }),
-            'email': forms.EmailInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Enter email'
-            }),
-        }
-# SERVICE PROVIDER SHOWCASE FORM
-class ServiceProviderUpdateForm(forms.ModelForm):
-    class Meta:
-        model = User
-        fields = ('bio', 'services', 'phone', 'location', 'city', 'profile_image')
 
-        widgets = {
-            'bio': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
-            'services': forms.CheckboxSelectMultiple(),  # providers choose services they offer
-            'phone': forms.TextInput(attrs={'class': 'form-control'}),
-            'location': forms.TextInput(attrs={'class': 'form-control'}),
-            'city': forms.TextInput(attrs={'class': 'form-control'}),
-            'profile_image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
-        }
+
+# ------------------------------------------------
+# PROVIDER SKILLS FORM
+# ------------------------------------------------
 class ProviderSkillsForm(forms.ModelForm):
     class Meta:
         model = ServiceProvider
@@ -160,3 +106,61 @@ class ProviderSkillsForm(forms.ModelForm):
         widgets = {
             'skills': forms.Textarea(attrs={'class': 'form-control', 'rows': 5})
         }
+
+
+# ------------------------------------------------
+# CORRECT PROVIDER PROFILE UPDATE FORM
+class ProviderProfileForm(forms.ModelForm):
+
+    services = forms.ModelMultipleChoiceField(
+        queryset=Service.objects.all(),
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label="Services You Offer"
+    )
+
+    class Meta:
+        model = ServiceProvider
+        fields = [
+            "company_name",
+            "skills",
+            "experience_years",
+            "portfolio_image",
+            "services",
+        ]
+
+        widgets = {
+            "company_name": forms.TextInput(attrs={"class": "form-control"}),
+            "skills": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "experience_years": forms.NumberInput(attrs={"class": "form-control"}),
+            "portfolio_image": forms.ClearableFileInput(attrs={"class": "form-control"}),
+        }
+class ProviderUserFieldsForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ["bio", "phone", "location", "city", "profile_image"]
+
+        widgets = {
+            "bio": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "phone": forms.TextInput(attrs={"class": "form-control"}),
+            "location": forms.TextInput(attrs={"class": "form-control"}),
+            "city": forms.TextInput(attrs={"class": "form-control"}),
+            "profile_image": forms.ClearableFileInput(attrs={"class": "form-control"}),
+        }
+class ServiceProviderUpdateForm(forms.ModelForm):
+    class Meta:
+        model = ServiceProvider
+        fields = [
+            "company_name",
+            "skills",
+            "experience_years",
+            "portfolio_image",
+            "services",
+        ]
+        widgets = {
+            "services": forms.CheckboxSelectMultiple(),
+        }
+class UserUpdateForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'first_name', 'last_name']

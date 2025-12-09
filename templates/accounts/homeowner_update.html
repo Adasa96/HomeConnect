@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit {{ homeowner.username }} — HomeConnect{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card shadow-sm p-4">
+        <h2>Edit {{ homeowner.username }}'s Profile</h2>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+
+            <div class="mb-3">
+                {{ form.username.label_tag }}
+                {{ form.username }}
+            </div>
+
+            <div class="mb-3">
+                {{ form.email.label_tag }}
+                {{ form.email }}
+            </div>
+
+            <div class="mb-3">
+                {{ form.phone.label_tag }}
+                {{ form.phone }}
+            </div>
+
+            <div class="mb-3">
+                {{ form.location.label_tag }}
+                {{ form.location }}
+            </div>
+
+            <div class="mb-3">
+                {{ form.city.label_tag }}
+                {{ form.city }}
+            </div>
+
+            <div class="mb-3">
+                {{ form.bio.label_tag }}
+                {{ form.bio }}
+            </div>
+
+            <div class="mb-3">
+                {{ form.profile_image.label_tag }}
+                {{ form.profile_image }}
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="{% url 'accounts:homeowner_detail' homeowner.pk %}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

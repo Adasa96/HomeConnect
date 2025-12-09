@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ homeowner.username }} — HomeConnect{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card shadow-sm p-4">
+        <h2>{{ homeowner.username }}</h2>
+        <p class="text-muted">Homeowner Profile</p>
+
+        {% if homeowner.profile_image %}
+            <div class="mb-3">
+                <img src="{{ homeowner.profile_image.url }}" class="img-fluid rounded shadow" alt="{{ homeowner.username }}" width="250">
+            </div>
+        {% else %}
+            <p class="text-muted">No profile image uploaded.</p>
+        {% endif %}
+
+        <h4>Bio</h4>
+        <p>{{ homeowner.bio|default:"No bio available." }}</p>
+
+        <h4>Contact Info</h4>
+        <ul>
+            <li><strong>Phone:</strong> {{ homeowner.phone|default:"N/A" }}</li>
+            <li><strong>Location:</strong> {{ homeowner.location|default:"N/A" }}</li>
+            <li><strong>City:</strong> {{ homeowner.city|default:"N/A" }}</li>
+        </ul>
+
+        <h4>Requested Services</h4>
+        {% if homeowner.services.exists %}
+            <ul>
+                {% for service in homeowner.services.all %}
+                    <li>{{ service.name }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-muted">No services selected.</p>
+        {% endif %}
+
+        <a href="{% url 'accounts:homeowner_list' %}" class="btn btn-secondary mt-3">Back to Homeowners</a>
+         </div>
+</div>
+{% endblock %}_

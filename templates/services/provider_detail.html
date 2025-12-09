@@ -1,49 +1,67 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ provider.company_name|default:provider.user.username }}{% endblock %}
+{% block title %}{{ provider.company_name|default:provider.user.username }} — HomeConnect{% endblock %}
 
 {% block content %}
-  <div class="row mb-3">
-    <div class="col-md-12">
-      <!-- CRUD BUTTONS -->
-      <a href="{% url 'services:provider_update' provider.pk %}" class="btn btn-primary btn-sm">Edit Profile</a>
-      <a href="{% url 'services:provider_delete' provider.pk %}" class="btn btn-danger btn-sm">Delete Profile</a>
-      <a href="{% url 'services:providers' %}" class="btn btn-secondary btn-sm">Back to Providers</a>
-    </div>
-  </div>
+<div class="container mt-5">
 
-  <div class="row">
-    <div class="col-md-8">
-      <h2>{{ provider.company_name|default:provider.user.username }}</h2>
-      <p>{{ provider.bio }}</p>
-      <p><strong>Contact:</strong> {{ provider.phone }}</p>
-      <p>
-        <strong>Services:</strong>
-        {% for s in provider.services.all %}
-          <span class="badge bg-secondary">{{ s.name }}</span>
-        {% empty %}
-          <em>No services listed</em>
-        {% endfor %}
-      </p>
+    <!-- CRUD Buttons -->
+    <div class="mb-3">
+        {% if request.user == provider.user %}
+            <a href="{% url 'accounts:provider_update' provider.pk %}" class="btn btn-primary btn-sm">Edit Profile</a>
+            <a href="{% url 'accounts:provider_delete' provider.pk %}" class="btn btn-danger btn-sm">Delete Profile</a>
+        {% endif %}
+        <a href="{% url 'accounts:provider_list' %}" class="btn btn-secondary btn-sm">Back to Providers</a>
     </div>
 
-    <div class="col-md-4">
-      <div class="card">
-        <div class="card-body">
-          <h5 class="card-title">Request Service</h5>
-          {% if user.is_authenticated %}
-            <form method="post">
-              {% csrf_token %}
-              {{ form.as_p }}
-              <button class="btn btn-primary" type="submit">Send Request</button>
-            </form>
-          {% else %}
-            <p>
-              Please <a href="{% url 'accounts:login' %}">login</a> to request a service.
+    <div class="row">
+        <div class="col-md-8">
+            <h2>{{ provider.company_name|default:provider.user.username }}</h2>
+
+            {% if provider.user.profile_image %}
+                <img src="{{ provider.user.profile_image.url }}" alt="{{ provider.user.username }}"
+                     class="img-fluid rounded mb-3" width="250">
+            {% endif %}
+
+            <p><strong>Bio:</strong> {{ provider.user.bio }}</p>
+            <p><strong>Phone:</strong> {{ provider.user.phone }}</p>
+            <p><strong>Location:</strong> {{ provider.user.location }}</p>
+            <p><strong>City:</strong> {{ provider.user.city }}</p>
+
+            <p><strong>Skills:</strong> {{ provider.skills }}</p>
+            <p><strong>Experience:</strong> {{ provider.experience_years }} years</p>
+
+            <p><strong>Services Offered:</strong>
+                {% if provider.services.exists %}
+                    {% for s in provider.services.all %}
+                        <span class="badge bg-secondary">{{ s.name }}</span>
+                    {% endfor %}
+                {% else %}
+                    <em>No services listed</em>
+                {% endif %}
             </p>
-          {% endif %}
+
+            {% if provider.portfolio_image %}
+                <p><strong>Portfolio:</strong></p>
+                <img src="{{ provider.portfolio_image.url }}" class="img-fluid rounded shadow mb-3" width="400">
+            {% endif %}
         </div>
-      </div>
+
+        <!-- Service Request Form for Homeowners -->
+        <div class="col-md-4">
+            {% if request.user.is_authenticated and request.user.user_type == 'homeowner' %}
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Request Service</h5>
+                        
+                    </div>
+                </div>
+            {% elif not request.user.is_authenticated %}
+                <p>
+                    Please <a href="{% url 'accounts:login' %}">login</a> to request a service.
+                </p>
+            {% endif %}
+        </div>
     </div>
-  </div>
+</div>
 {% endblock %}

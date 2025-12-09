@@ -73,10 +73,12 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # Make accounts the homepage
+    path('', include('accounts.urls')),
     # Redirect root URL to admin for now
     path('accounts/', include('accounts.urls')),
     path('services/', include('services.urls')),
-    path('mpesa/', include('connectmpesa.urls')),
+    path('connectmpesa/', include('connectmpesa.urls')),
     path('booking/', include('booking.urls')),
         # Redirect root URL to services dashboard for now
     path('', RedirectView.as_view(pattern_name='services:dashboard', permanent=False)),

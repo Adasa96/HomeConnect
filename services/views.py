@@ -4,40 +4,125 @@ from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.http import HttpResponseForbidden
 
-from .models import ServiceProvider, ServiceRequest
+from .models import ServiceRequest
+from accounts.models import ServiceProvider
+
 from .forms import ServiceRequestForm, ProviderEditForm
+
+# HOMEOWNER VIEWS
+@login_required
+def homeowner_dashboard(request):
+    """Dashboard for homeowners showing their service requests and creating new requests"""
+    if request.user.user_type != 'homeowner':
+        return redirect('services:provider_dashboard')
+
+    requests_qs = (
+        ServiceRequest.objects.filter(homeowner=request.user)
+        .select_related('provider', 'service')
+        .order_by('-created_at')
+    )
+
+    if request.method == 'POST':
+        form = ServiceRequestForm(request.POST)
+        if form.is_valid():
+            service_request = form.save(commit=False)
+            service_request.homeowner = request.user
+            service_request.save()
+            messages.success(request, f"Service request sent to {service_request.provider.company_name}")
+            return redirect('services:homeowner_dashboard')
+    else:
+        form = ServiceRequestForm()
+
+    return render(
+        request,
+        'services/dashboard.html',
+        {'requests': requests_qs, 'form': form}
+    )
 
 
 @login_required
-def dashboard(request):
-    """Homeowner dashboard showing their requests"""
-    requests_qs = ServiceRequest.objects.filter(homeowner=request.user).select_related('provider', 'service').order_by('-created_at')
-    return render(request, 'services/dashboard.html', {'requests': requests_qs})
+def create_service_request(request, provider_pk=None):
+    """Homeowner creates a service request for a provider"""
+    if request.user.user_type != 'homeowner':
+        messages.error(request, "Only homeowners can create service requests.")
+        return redirect('services:provider_dashboard')
+
+    form = ServiceRequestForm(request.POST or None)
+    if provider_pk:
+        form.fields['provider'].queryset = ServiceProvider.objects.filter(pk=provider_pk)
+    else:
+        form.fields['provider'].queryset = ServiceProvider.objects.all()
+
+    if request.method == 'POST' and form.is_valid():
+        service_request = form.save(commit=False)
+        service_request.homeowner = request.user
+        service_request.save()
+        messages.success(request, "Service request submitted successfully!")
+        return redirect('services:homeowner_dashboard')
+
+    return render(request, 'services/service_request_form.html', {'form': form})
 
 
+@login_required
+def request_detail(request, pk):
+    """Homeowner views their own request"""
+    sr = get_object_or_404(ServiceRequest, pk=pk, homeowner=request.user)
+    return render(request, 'services/request_detail.html', {'request_obj': sr})
+
+
+@login_required
+def update_request(request, pk):
+    """Homeowner edits their own request"""
+    request_obj = get_object_or_404(ServiceRequest, pk=pk, homeowner=request.user)
+
+    if request.method == 'POST':
+        form = ServiceRequestForm(request.POST, instance=request_obj)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Request updated successfully.")
+            return redirect('services:request_detail', pk=pk)
+    else:
+        form = ServiceRequestForm(instance=request_obj)
+
+    return render(request, 'services/request_edit.html', {'form': form, 'request_obj': request_obj})
+
+
+@login_required
+def delete_request(request, pk):
+    """Homeowner deletes their own request"""
+    service_request = get_object_or_404(ServiceRequest, pk=pk, homeowner=request.user)
+
+    if request.method == 'POST':
+        service_request.delete()
+        messages.success(request, "Request deleted successfully.")
+        return redirect('services:homeowner_dashboard')
+
+    return render(request, 'services/request_delete_confirm.html', {'request_item': service_request})
+
+
+# SERVICE PROVIDER VIEWS
+@login_required
 def providers_list(request):
-    """List all service providers along with the services they offer. Prefetch 'services' from the related user models to reduce queries."""
-    providers = ServiceProvider.objects.select_related('user').prefetch_related('user__services')
+    """List all service providers"""
+    providers = ServiceProvider.objects.select_related('user').prefetch_related('services')
     return render(request, 'services/providers_list.html', {'providers': providers})
 
 
+@login_required
 def provider_detail(request, pk):
-    """View a single provider and allow homeowners to send requests"""
+    """View a single provider"""
     provider = get_object_or_404(ServiceProvider, pk=pk)
+    form = ServiceRequestForm()
 
-    if request.method == 'POST':
-        if not request.user.is_authenticated or request.user == provider.user:
-            return redirect('accounts:login')
+    if request.method == 'POST' and request.user.user_type == 'homeowner':
         form = ServiceRequestForm(request.POST)
         if form.is_valid():
-            req = form.save(commit=False)
-            req.homeowner = request.user
-            req.provider = provider
-            req.save()
-            messages.success(request, 'Service request sent to the provider.')
+            sr = form.save(commit=False)
+            sr.homeowner = request.user
+            sr.provider = provider
+            sr.save()
+            messages.success(request, "Service request sent successfully!")
             return redirect('services:providers')
-    else:
-        form = ServiceRequestForm()
 
     return render(request, 'services/provider_detail.html', {'provider': provider, 'form': form})
 
@@ -45,23 +130,30 @@ def provider_detail(request, pk):
 @login_required
 def provider_dashboard(request):
     """Provider dashboard showing requests for this provider"""
-    if not hasattr(request.user, 'provider_profile'):
-        return HttpResponseForbidden('Not a provider')
+    if request.user.user_type != 'service_provider':
+        return HttpResponseForbidden("Access denied.")
 
-    provider = request.user.provider_profile
+    # Use the related_name from your model
+    provider = request.user.services_provider_profile
+
+    # Get all requests for this provider
     requests_qs = provider.requests.select_related('homeowner', 'service').order_by('-created_at')
-    return render(request, 'services/provider_dashboard.html', {'provider': provider, 'requests': requests_qs})
 
+    return render(
+        request,
+        'services/provider_dashboard.html',
+        {'provider': provider, 'requests': requests_qs}
+    )
 
 @require_POST
 @login_required
 def request_action(request, pk):
-    """Provider accepts/completes/cancels a service request"""
+    """Provider can accept/complete/cancel a request"""
     sr = get_object_or_404(ServiceRequest, pk=pk)
 
-    # Only provider owning the request or staff can change
-    if not (hasattr(request.user, 'provider_profile') and request.user.provider_profile == sr.provider) and not request.user.is_staff:
-        return HttpResponseForbidden('Not allowed')
+    # Only provider owner or staff can change
+    if not (hasattr(request.user, 'services_provider_profile') and request.user.services_provider_profile == sr.provider) and not request.user.is_staff:
+        return HttpResponseForbidden("Not allowed.")
 
     action = request.POST.get('action')
     if action == 'accept':
@@ -71,126 +163,38 @@ def request_action(request, pk):
     elif action == 'cancel':
         sr.status = ServiceRequest.STATUS_CANCELLED
     sr.save()
-    messages.success(request, f'Request {sr.id} updated to {sr.status}.')
+    messages.success(request, f"Request {sr.id} updated to {sr.status}.")
     return redirect('services:provider_dashboard')
 
 
-# Optional CRUD for homeowner requests
-
 @login_required
-def request_detail(request, pk):
-    """Homeowner can view details of their own request if not accepted"""
-    sr = get_object_or_404(ServiceRequest, pk=pk)
-    if sr.homeowner != request.user or sr.status != ServiceRequest.STATUS_PENDING:
-        return HttpResponseForbidden('Cannot delete this request')
-
-    if request.method == 'POST':
-        sr.delete()
-        messages.success(request, 'Request deleted.')
-        return redirect('services:dashboard')
-
-    return render(request, 'services/request_confirm_delete.html', {'request_obj': sr})
-
-@login_required
-def update_request(request, pk):
-    request_obj = get_object_or_404(ServiceRequest, pk=pk)
-
-    # Only the homeowner who created the request can edit it
-    if request_obj.homeowner != request.user:
-        messages.error(request, "You are not allowed to edit this request.")
-        return redirect("services:request_detail", pk=pk)
-
-    if request.method == "POST":
-        form = ServiceRequestForm(request.POST, instance=request_obj)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Your request has been updated successfully.")
-            return redirect("services:request_detail", pk=pk)
-    else:
-        form = ServiceRequestForm(instance=request_obj)
-
-    return render(request, "services/request_edit.html", {"form": form, "request_obj": request_obj})
-
-@login_required
-def delete_request(request, pk):
-    service_request = get_object_or_404(ServiceRequest, pk=pk, homeowner=request.user)
-
-    if request.method == "POST":
-        service_request.delete()
-        messages.success(request, "Request deleted successfully.")
-        return redirect('services:dashboard')
-
-    return render(request, 'services/request_delete_confirm.html', {'request_item': service_request})
-
-@login_required
-def update_provider(request, pk):
+def provider_update(request, pk):
+    """Edit provider profile"""
     provider = get_object_or_404(ServiceProvider, pk=pk)
-
-    # Only the owner can edit
-    if provider.user != request.user:
-        return HttpResponseForbidden("You are not allowed to edit this profile.")
-
-    if request.method == "POST":
-        form = ProviderEditForm(request.POST, request.FILES, instance=provider)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Profile updated successfully.")
-            return redirect('services:provider_detail', pk=pk)
-    else:
-        form = ProviderEditForm(instance=provider)
-
-    return render(request, "services/provider_edit.html", {"form": form, "provider": provider})
-
-@login_required
-def delete_provider(request, pk):
-    provider = get_object_or_404(ServiceProvider, pk=pk)
-
-    # Only owner can delete
     if provider.user != request.user:
         return HttpResponseForbidden("Not allowed.")
 
-    if request.method == "POST":
-        provider.delete()
-        messages.success(request, "Provider profile deleted.")
-        return redirect('services:providers')
+    form = ProviderEditForm(request.POST or None, request.FILES or None, instance=provider)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, "Profile updated successfully.")
+        return redirect('services:provider_detail', pk=pk)
 
-    return render(request, "services/provider_delete_confirm.html", {"provider": provider})
-@login_required
-def provider_update(request, pk):
-    provider = get_object_or_404(ServiceProvider, pk=pk)
+    return render(request, 'services/provider_update.html', {'form': form, 'provider': provider})
 
-    # Only the provider themselves should edit their profile
-    if provider.user != request.user:
-        messages.error(request, "You are not allowed to edit this profile.")
-        return redirect("services:provider_detail", pk=pk)
-
-    if request.method == "POST":
-        form = ProviderEditForm(request.POST, request.FILES, instance=provider)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Profile updated successfully.")
-            return redirect("services:provider_detail", pk=pk)
-    else:
-        form = ProviderEditForm(instance=provider)
-
-    return render(request, "services/provider_update.html", {"form": form, "provider": provider})
 
 @login_required
 def provider_delete(request, pk):
+    """Delete provider profile"""
     provider = get_object_or_404(ServiceProvider, pk=pk)
-
-    # Only the owner of the profile can delete it
     if provider.user != request.user:
-        messages.error(request, "You are not allowed to delete this profile.")
-        return redirect("services:provider_detail", pk=pk)
+        return HttpResponseForbidden("Not allowed.")
 
-    if request.method == "POST":
+    if request.method == 'POST':
         user = provider.user
         provider.delete()
-        user.delete()   # Optional: delete the user account too
+        user.delete()  # Optional: delete the user account as well
+        messages.success(request, "Provider profile deleted successfully.")
+        return redirect('accounts:login')
 
-        messages.success(request, "Your provider profile has been deleted.")
-        return redirect("accounts:login")
-
-    return render(request, "services/provider_delete.html", {"provider": provider})
-
+    return render(request, 'services/provider_delete_confirm.html', {'provider': provider})

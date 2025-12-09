@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}Payment History{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">My Payment History</h1>
+
+    {% if requests %}
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Amount (KES)</th>
+                        <th>Phone Number</th>
+                        <th>Status</th>
+                        <th>Checkout ID</th>
+                        <th>Created At</th>
+                        <th>Updated At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in requests %}
+                    <tr>
+                        <td>{{ req.pk }}</td>
+                        <td>{{ req.amount }}</td>
+                        <td>{{ req.phone_number }}</td>
+                        <td>
+                            {% if req.status == 'COMPLETED' %}
+                                <span class="badge bg-success">{{ req.status }}</span>
+                            {% elif req.status == 'FAILED' %}
+                                <span class="badge bg-danger">{{ req.status }}</span>
+                            {% elif req.status == 'SENT' %}
+                                <span class="badge bg-warning text-dark">{{ req.status }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ req.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ req.checkout_request_id|default:"-" }}</td>
+                        <td>{{ req.created_at|date:"Y-m-d H:i" }}</td>
+                        <td>{{ req.updated_at|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            You have no payment requests yet. <a href="{% url 'connectmpesa:start_payment' %}">Make a payment</a>.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

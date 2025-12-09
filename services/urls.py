@@ -5,7 +5,8 @@ app_name = 'services'
 
 urlpatterns = [
     # Dashboard
-    path('', views.dashboard, name='dashboard'),
+    path('', views.homeowner_dashboard, name='dashboard'),
+    path('provider/dashboard/', views.provider_dashboard, name='provider_dashboard'),
 
     # PROVIDERS
     path('providers/', views.providers_list, name='providers'),

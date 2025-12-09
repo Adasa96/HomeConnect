@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete {{ homeowner.username }} — HomeConnect{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card shadow-sm p-4">
+        <h4>Confirm Deletion</h4>
+        <div class="alert alert-danger">
+            <strong>Warning:</strong> This action is permanent. {{ homeowner.username }}'s profile and all related data will be deleted.
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Yes, Delete Profile</button>
+            <a href="{% url 'accounts:homeowner_detail' homeowner.pk %}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

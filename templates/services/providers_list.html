@@ -3,28 +3,45 @@
 {% block title %}Service Providers{% endblock %}
 
 {% block content %}
-  <h1>Service Providers</h1>
-  <div class="row">
-    {% for p in providers %}
-      <div class="col-md-4 mb-3">
-        <div class="card h-100">
-          <div class="card-body">
-            <h5 class="card-title">{{ p.company_name|default:p.user.username }}</h5>
-            <p class="card-text">{{ p.user.bio|truncatechars:120 }}</p>
-            <p>
-              <strong>Services:</strong>
-              {% for s in p.user.services.all %}
+<h1 class="mb-4">Service Providers</h1>
+
+<div class="row">
+  {% for p in providers %}
+    <div class="col-md-4 mb-3">
+      <div class="card h-100 shadow-sm">
+
+        {% if p.profile_image %}
+          <img src="{{ p.profile_image.url }}" class="card-img-top" alt="{{ p.user.username }}">
+        {% endif %}
+
+        <div class="card-body d-flex flex-column">
+          <h5 class="card-title">{{ p.company_name|default:p.user.username }}</h5>
+          <p class="card-text">{{ p.bio|truncatechars:120 }}</p>
+
+          <p>
+            <strong>Services:</strong>
+            {% if p.services.exists %}
+              {% for s in p.services.all %}
                 <span class="badge bg-secondary">{{ s.name }}</span>
-              {% empty %}
-                <em>No services listed</em>
               {% endfor %}
-            </p>
-            <a href="{% url 'services:provider_detail' p.pk %}" class="btn btn-outline-primary">View</a>
-          </div>
+            {% else %}
+              <em>No services listed</em>
+            {% endif %}
+          </p>
+
+          <a href="{% url 'services:provider_detail' p.pk %}" 
+             class="btn btn-outline-primary mt-auto">
+             View Profile
+          </a>
         </div>
       </div>
-    {% empty %}
-      <p>No providers yet.</p>
-    {% endfor %}
-  </div>
+    </div>
+
+  {% empty %}
+    <div class="col-12">
+      <p class="text-muted">No service providers available yet.</p>
+    </div>
+  {% endfor %}
+</div>
+
 {% endblock %}
