@@ -38,19 +38,23 @@ CSRF_TRUSTED_ORIGINS = [
 # Application definition
 
 INSTALLED_APPS = [
+    'accounts',  # MUST come before django.contrib.auth
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'accounts',
+
     'services',
     'connectmpesa',
     'booking',
     'cloudinary',
     'widget_tweaks',
+    'django_daraja',
 ]
+
 
 # register our custom user model
 AUTH_USER_MODEL = 'accounts.User'
@@ -60,6 +64,17 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'services:dashboard'
 LOGOUT_REDIRECT_URL = 'accounts:login'
+
+import cloudinary
+from decouple import config
+CLOUDINARY_CONFIGS = {
+    'cloud_name' : config('CLOUDINARY_CLOUD_NAME'),
+    'api_key' : config('CLOUDINARY_API_KEY'),
+    'api_secret' : config('CLOUDINARY_API_SECRET'),
+}
+if CLOUDINARY_CONFIGS['cloud_name']:
+    cloudinary.config(**CLOUDINARY_CONFIGS)
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -134,9 +149,10 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
-
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+# Production / collectstatic
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -147,13 +163,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# MPESA SETTINGS
-MPESA_ENV = "sandbox"   # change to 'production' when live
-MPESA_CONSUMER_KEY = "your_consumer_key"
-MPESA_CONSUMER_SECRET = "your_consumer_secret"
 
-MPESA_SHORTCODE = "174379"   # Test paybill
-MPESA_PASSKEY = "your_passkey"
-
-MPESA_CALLBACK_URL = "https://yourdomain.com/mpesa/callback/"
 

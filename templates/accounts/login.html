@@ -1,41 +1,62 @@
 {% extends 'base.html' %}
+{% load static %}
 {% load widget_tweaks %}
 
 {% block title %}Login — HomeConnect{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
+<div class="row justify-content-center mt-5">
     <div class="col-md-6">
         <div class="card shadow-sm">
-            <div class="card-body">
-                <h3 class="card-title mb-4 text-center">Login</h3>
-                
+            <div class="card-body text-center">
+                <!-- Logo -->
+                <img src="{% static 'images/logo.png' %}" alt="HomeConnect Logo" class="mb-3" style="height: 80px;">
+
+                <h3 class="card-title mb-4">Login</h3>
+
+                <!-- Messages -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Form errors -->
                 {% if form.non_field_errors %}
                     <div class="alert alert-danger">
                         {{ form.non_field_errors }}
                     </div>
                 {% endif %}
 
-                <form method="post">
+                <!-- Login form -->
+                <form method="post" novalidate>
                     {% csrf_token %}
-                    <div class="mb-3">
+                    <div class="mb-3 text-start">
                         {{ form.username.label_tag }}
                         {{ form.username|add_class:"form-control" }}
-                        {% if form.username.errors %}
-                            <div class="text-danger small">{{ form.username.errors }}</div>
-                        {% endif %}
+                        {% for error in form.username.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-3 text-start">
                         {{ form.password.label_tag }}
                         {{ form.password|add_class:"form-control" }}
-                        {% if form.password.errors %}
-                            <div class="text-danger small">{{ form.password.errors }}</div>
-                        {% endif %}
+                        {% for error in form.password.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
                     </div>
-                    <button class="btn btn-primary w-100" type="submit">Login</button>
+
+                    <button type="submit" class="btn btn-primary w-100">Login</button>
                 </form>
 
-                <div class="mt-2 text-end">
+                <div class="mt-3 text-center">
+                    <small>
+                        After login, <strong>homeowners</strong> will go to their dashboard and 
+                        <strong>service providers</strong> to theirs.
+                    </small>
+                </div>
+
+                <div class="mt-2 text-center">
                     <a href="{% url 'accounts:password_reset' %}">Forgot Password?</a>
                 </div>
 

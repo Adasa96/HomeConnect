@@ -1,0 +1,178 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HomeConnect - Welcome</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --dark-text: #2c3e50;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #001f3f 100%);
+            font-family: 'Roboto', sans-serif;
+            color: var(--dark-text);
+        }
+
+        /* Navigation bar */
+        nav {
+            width: 100%;
+            padding: 15px 50px;
+            background: linear-gradient(90deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            z-index: 5;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        nav .nav-logo img {
+            width: 100px;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 20px;
+        }
+
+        nav ul li a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        nav ul li a:hover {
+            color: #ffc107;
+        }
+
+        /* Main hero content */
+        .hero-container {
+            height: 100vh;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .hero-box {
+            background: rgba(255, 255, 255, 0.85);
+            padding: 40px;
+            border-radius: 15px;
+            max-width: 600px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            animation: fadeIn 1.5s ease-in-out;
+        }
+
+        .hero-box img {
+            width: 120px;
+            margin-bottom: 20px;
+        }
+
+        .hero-box h1 {
+            color: var(--primary-color);
+            font-size: 48px;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .hero-box p {
+            font-size: 18px;
+            color: #555;
+            margin-bottom: 30px;
+        }
+
+        .btn-start {
+            padding: 14px 32px;
+            background: linear-gradient(135deg, var(--secondary-color) 0%, #2980b9 100%);
+            border-radius: 8px;
+            color: white;
+            font-size: 18px;
+            text-decoration: none;
+            transition: 0.3s ease;
+        }
+
+        .btn-start:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            .hero-box h1 { font-size: 34px; }
+            .hero-box p { font-size: 16px; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand nav-logo" href="#">
+                {% if user.is_authenticated and user.profile.logo %}
+                    <img src="{{ user.profile.logo.url }}" alt="Logo" style="height: 45px;">
+                {% else %}
+                    <img src="{% static 'images/logo.png' %}" alt="HomeConnect Logo" style="height: 45px;">
+                {% endif %}
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="mainNavbar">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="{% url 'accounts:home' %}">Home</a></li>
+                    {% if user.is_authenticated %}
+                        <li class="nav-item"><a class="nav-link" href="{% url 'accounts:logout' %}">Logout</a></li>
+                    {% else %}
+                        <li class="nav-item"><a class="nav-link" href="{% url 'accounts:login' %}">Login</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'accounts:register' %}">Register</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <div class="hero-container">
+        <div class="hero-box">
+            {% if user.is_authenticated and user.profile.logo %}
+                <img src="{{ user.profile.logo.url }}" alt="HomeConnect Logo">
+            {% else %}
+                <img src="{% static 'images/logo.png' %}" alt="HomeConnect Logo">
+            {% endif %}
+            <h1>Welcome to HomeConnect</h1>
+            <p>Your trusted platform to connect homeowners with verified service providers.</p>
+            {% if user.is_authenticated %}
+                <a href="{% url 'services:dashboard' %}" class="btn-start">Go to Dashboard</a>
+            {% else %}
+                <a href="{% url 'accounts:login' %}" class="btn-start">Get Started</a>
+            {% endif %}
+        </div>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Provider Profile{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-3">Edit Your Provider Profile</h2>
+
+    <!-- Show success/error messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data" class="card p-4 shadow">
+        {% csrf_token %}
+
+        <div class="row">
+            <!-- Company Name -->
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Company Name</label>
+                <input type="text" name="company_name" class="form-control"
+                       value="{{ provider.company_name }}">
+            </div>
+
+            <!-- Phone -->
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Phone</label>
+                <input type="text" name="phone" class="form-control"
+                       value="{{ provider.phone }}">
+            </div>
+
+            <!-- Location -->
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Location</label>
+                <input type="text" name="location" class="form-control"
+                       value="{{ provider.location }}">
+            </div>
+
+            <!-- Services -->
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Services Offered</label>
+                <textarea name="services" class="form-control" rows="4">{{ provider.services }}</textarea>
+                <small class="text-muted">Example: Plumbing, Painting, Electrical, Cleaning, Babysitting...</small>
+            </div>
+
+            <!-- Description -->
+            <div class="col-12 mb-3">
+                <label class="form-label">About Your Business</label>
+                <textarea name="description" class="form-control" rows="5">{{ provider.description }}</textarea>
+            </div>
+
+            <!-- Profile Image -->
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Profile Image</label><br>
+                {% if provider.profile_image %}
+                    <img src="{{ provider.profile_image.url }}" class="img-thumbnail mb-2" width="200">
+                {% endif %}
+                <input type="file" name="profile_image" class="form-control">
+            </div>
+        </div>
+
+        <button class="btn btn-primary mt-3" type="submit">Save Changes</button>
+        <a href="{% url 'provider_dashboard' %}" class="btn btn-secondary mt-3">Cancel</a>
+    </form>
+</div>
+{% endblock %}

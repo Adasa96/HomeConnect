@@ -47,21 +47,6 @@
             {% endif %}
         </div>
 
-        <!-- Service Request Form for Homeowners -->
-        <div class="col-md-4">
-            {% if request.user.is_authenticated and request.user.user_type == 'homeowner' %}
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">Request Service</h5>
-                        
-                    </div>
-                </div>
-            {% elif not request.user.is_authenticated %}
-                <p>
-                    Please <a href="{% url 'accounts:login' %}">login</a> to request a service.
-                </p>
-            {% endif %}
-        </div>
     </div>
 </div>
 {% endblock %}

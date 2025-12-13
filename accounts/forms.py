@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 
-from .models import ServiceProvider, User, Service
+from .models import ServiceProvider, User
 from services.models import Service
 
 User = get_user_model()
@@ -21,7 +21,8 @@ phone_validator = RegexValidator(
 # ------------------------------------------------
 # LOGIN FORM
 # ------------------------------------------------
-class UserLoginForm(AuthenticationForm):
+
+class UserLoginForm(forms.Form): 
     username = forms.CharField(widget=forms.TextInput(attrs={
         'class': 'form-control',
         'placeholder': 'Username'
@@ -30,7 +31,6 @@ class UserLoginForm(AuthenticationForm):
         'class': 'form-control',
         'placeholder': 'Password'
     }))
-
 
 # ------------------------------------------------
 # USER REGISTRATION FORM
@@ -49,12 +49,22 @@ class UserRegistrationForm(forms.ModelForm):
         ('homeowner', 'Homeowner'),
         ('service_provider', 'Service Provider'),
     ]
-    user_type = forms.ChoiceField(choices=USER_TYPES, widget=forms.Select(attrs={'class': 'form-control'}))
+    user_type = forms.ChoiceField(
+        choices=USER_TYPES,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+    # Only relevant if service_provider
+    services = forms.ModelMultipleChoiceField(
+        queryset=Service.objects.all(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="Services You Offer"
+    )
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'phone', 'location', 'city', 'user_type', 'bio', 'profile_image')
-
+        fields = ('username', 'email', 'phone', 'location', 'city', 'user_type', 'bio', 'profile_image', 'services')
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
@@ -75,9 +85,16 @@ class UserRegistrationForm(forms.ModelForm):
         user.set_password(self.cleaned_data['password1'])
         if commit:
             user.save()
+
+            # If service provider, create profile and assign services
+            if user.user_type == "service_provider":
+                provider_profile = ServiceProvider.objects.create(user=user)
+                services = self.cleaned_data.get("services")
+                if services:
+                    provider_profile.services.set(services)
+                    provider_profile.save()
+
         return user
-
-
 # ------------------------------------------------
 # USER PROFILE UPDATE FORM
 # ------------------------------------------------
@@ -85,7 +102,6 @@ class UserProfileForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ('username', 'email', 'phone', 'location', 'city', 'bio', 'profile_image')
-
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
@@ -109,9 +125,24 @@ class ProviderSkillsForm(forms.ModelForm):
 
 
 # ------------------------------------------------
-# CORRECT PROVIDER PROFILE UPDATE FORM
-class ProviderProfileForm(forms.ModelForm):
+# SERVICE PROVIDER PROFILE FORMS
+# ------------------------------------------------
+class ProviderUserFieldsForm(forms.ModelForm):
+    """Fields from the User model for providers."""
+    class Meta:
+        model = User
+        fields = ["bio", "phone", "location", "city", "profile_image"]
+        widgets = {
+            "bio": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "phone": forms.TextInput(attrs={"class": "form-control"}),
+            "location": forms.TextInput(attrs={"class": "form-control"}),
+            "city": forms.TextInput(attrs={"class": "form-control"}),
+            "profile_image": forms.ClearableFileInput(attrs={"class": "form-control"}),
+        }
 
+
+class ProviderProfileForm(forms.ModelForm):
+    """Fields from the ServiceProvider model."""
     services = forms.ModelMultipleChoiceField(
         queryset=Service.objects.all(),
         widget=forms.CheckboxSelectMultiple,
@@ -128,26 +159,16 @@ class ProviderProfileForm(forms.ModelForm):
             "portfolio_image",
             "services",
         ]
-
         widgets = {
             "company_name": forms.TextInput(attrs={"class": "form-control"}),
             "skills": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
             "experience_years": forms.NumberInput(attrs={"class": "form-control"}),
             "portfolio_image": forms.ClearableFileInput(attrs={"class": "form-control"}),
         }
-class ProviderUserFieldsForm(forms.ModelForm):
-    class Meta:
-        model = User
-        fields = ["bio", "phone", "location", "city", "profile_image"]
 
-        widgets = {
-            "bio": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
-            "phone": forms.TextInput(attrs={"class": "form-control"}),
-            "location": forms.TextInput(attrs={"class": "form-control"}),
-            "city": forms.TextInput(attrs={"class": "form-control"}),
-            "profile_image": forms.ClearableFileInput(attrs={"class": "form-control"}),
-        }
+
 class ServiceProviderUpdateForm(forms.ModelForm):
+    """Update form for ServiceProvider model only."""
     class Meta:
         model = ServiceProvider
         fields = [
@@ -160,6 +181,11 @@ class ServiceProviderUpdateForm(forms.ModelForm):
         widgets = {
             "services": forms.CheckboxSelectMultiple(),
         }
+
+
+# ------------------------------------------------
+# GENERAL USER UPDATE FORM
+# ------------------------------------------------
 class UserUpdateForm(forms.ModelForm):
     class Meta:
         model = User

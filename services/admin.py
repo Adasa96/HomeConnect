@@ -1,27 +1,18 @@
 from django.contrib import admin
-from .models import Service, ServiceProvider, ServiceRequest
+from .models import Service, ServiceRequest
 
-
+# -------------------------
+# Service Admin
+# -------------------------
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name')
+    list_display = ('id', 'name', 'description')
     search_fields = ('name',)
 
 
-@admin.register(ServiceProvider)
-class ServiceProviderAdmin(admin.ModelAdmin):
-    list_display = (
-        "id",
-        "user",
-        "company_name",
-        "phone",
-        "bio",
-        "created_at",  # You need to add this field in ServiceProvider model
-    )
-    search_fields = ("company_name", "user__username", "phone", "bio")
-    filter_horizontal = ("services",)
-
-
+# -------------------------
+# ServiceRequest Admin
+# -------------------------
 @admin.register(ServiceRequest)
 class ServiceRequestAdmin(admin.ModelAdmin):
     list_display = (
@@ -39,7 +30,9 @@ class ServiceRequestAdmin(admin.ModelAdmin):
         "service__name",
     )
 
-    # Actions to bulk update request status
+    # -------------------------
+    # Bulk actions for status
+    # -------------------------
     def mark_as_pending(self, request, queryset):
         queryset.update(status=ServiceRequest.STATUS_PENDING)
     mark_as_pending.short_description = "Mark selected requests as Pending"
@@ -55,3 +48,5 @@ class ServiceRequestAdmin(admin.ModelAdmin):
     def mark_as_cancelled(self, request, queryset):
         queryset.update(status=ServiceRequest.STATUS_CANCELLED)
     mark_as_cancelled.short_description = "Mark selected requests as Cancelled"
+
+    actions = [mark_as_pending, mark_as_accepted, mark_as_completed, mark_as_cancelled]

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User, Service, ServiceProvider
+from .models import User, Service, ServiceProvider,Profile
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
@@ -53,3 +53,12 @@ class ServiceProviderAdmin(admin.ModelAdmin):
     list_display = ('user', 'company_name', 'experience_years')
     search_fields = ('company_name', 'user__username')
 
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = ['user', 'logo_tag']
+
+    def logo_tag(self, obj):
+        if obj.logo:
+            return format_html('<img src="{}" width="50" height="50" />', obj.logo.url)
+        return "-"
+    logo_tag.short_description = 'Logo'

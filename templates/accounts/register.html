@@ -1,22 +1,63 @@
 {% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
 
 {% block title %}Register — HomeConnect{% endblock %}
 
 {% block content %}
-  <div class="row justify-content-center">
+<div class="row justify-content-center mt-5">
     <div class="col-md-6">
-      <div class="card">
-        <div class="card-body">
-          <h3 class="card-title mb-3">Create an account</h3>
-          <form method="post">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <div class="d-grid">
-              <button type="submit" class="btn btn-primary">Register</button>
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h3 class="card-title mb-4">Create an account</h3>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <!-- Render all form fields -->
+                    {% for field in form %}
+                        <div class="mb-3 text-start" id="field-{{ field.name }}">
+                            {{ field.label_tag }}
+                            {{ field|add_class:"form-control" }}
+                            {% if field.help_text %}
+                                <small class="form-text text-muted">{{ field.help_text }}</small>
+                            {% endif %}
+                            {% for error in field.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+
+                    <div class="d-grid mt-3">
+                        <button type="submit" class="btn btn-primary">Register</button>
+                    </div>
+                </form>
             </div>
-          </form>
         </div>
-      </div>
     </div>
-  </div>
+</div>
+
+<!-- JavaScript: show services field only for service providers -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const userType = document.getElementById('id_user_type');
+    const servicesField = document.getElementById('field-services');
+
+    function toggleServices() {
+        if (servicesField) {
+            servicesField.style.display = (userType.value === 'service_provider') ? 'block' : 'none';
+        }
+    }
+
+    toggleServices();
+    userType.addEventListener('change', toggleServices);
+});
+</script>
+
 {% endblock %}

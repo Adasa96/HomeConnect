@@ -1,14 +1,15 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from . import views
+from accounts.views import home_view
 
 app_name = 'accounts'
 
 urlpatterns = [
-     path('', views.home_view, name='home'),
+    path('', views.home_view, name='home'),
     # AUTHENTICATION
     path('register/', views.register_view, name='register'),
-    path('login/', views.login_view, name='login'),
+    path("after-login/", views.redirect_after_login, name="redirect_after_login"),
     path('logout/', views.logout_view, name='logout'),
 
     # PASSWORD RESET WORKFLOW
@@ -32,6 +33,7 @@ urlpatterns = [
          ),
          name='password_reset_complete'),
     # DASHBOARDS
+    path('login/',views.login_view, name='login'),
     path('provider/dashboard/', views.provider_dashboard, name='provider_dashboard'),
     path('homeowner/dashboard/', views.homeowner_dashboard, name='homeowner_dashboard'),
 
@@ -61,7 +63,7 @@ urlpatterns = [
 
     #SERVICES
     path('service-request/', views.create_service_request,name='create_service_request'),
-     path('service-request/provider/<int:provider_pk>/', views.create_service_request,
+    path('service_request_provider/<int:provider_pk>/', views.create_service_request,
     name='create_service_request_for_provider'),
 
 ]

@@ -129,21 +129,20 @@ def provider_detail(request, pk):
 
 @login_required
 def provider_dashboard(request):
-    """Provider dashboard showing requests for this provider"""
-    if request.user.user_type != 'service_provider':
-        return HttpResponseForbidden("Access denied.")
+    if request.user.user_type != "service_provider":
+        return HttpResponseForbidden("Access denied")
 
-    # Use the related_name from your model
-    provider = request.user.services_provider_profile
+    provider = request.user.provider_profile   # related_name='provider_profile'
 
-    # Get all requests for this provider
-    requests_qs = provider.requests.select_related('homeowner', 'service').order_by('-created_at')
+    requests_qs = ServiceRequest.objects.filter(provider=provider)
 
     return render(
         request,
-        'services/provider_dashboard.html',
-        {'provider': provider, 'requests': requests_qs}
+        "services/provider_dashboard.html",
+        {"provider": provider, "requests": requests_qs},
     )
+
+
 
 @require_POST
 @login_required
