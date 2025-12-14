@@ -5,18 +5,22 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .models import PaymentRequest, MpesaTransaction
 from .forms import MpesaPaymentForm
+from django.conf import settings
 from django_daraja.mpesa.core import MpesaClient
 
 @login_required
 def start_payment(request):
+    """
+    Initiates an M-Pesa STK Push for the logged-in user.
+    """
     if request.method == 'POST':
         amount = request.POST.get('amount')
-        phone = request.POST.get('phone')  # name matches your form
+        phone = request.POST.get('phone')
 
         if not amount or not phone:
             return JsonResponse({'status': 'error', 'message': 'Amount and phone number are required.'})
 
-        # Optionally: create payment record with "pending" status
+        # Create a payment request with pending status
         payment_request = PaymentRequest.objects.create(
             user=request.user,
             amount=amount,
@@ -24,33 +28,31 @@ def start_payment(request):
             status=PaymentRequest.STATUS_PENDING
         )
 
-        # Use daraja to initiate STK push
-        cl = MpesaClient()
+        # Initialize M-Pesa client with settings
+        cl = MpesaClient(
+            consumer_key=settings.MPESA_CONSUMER_KEY,
+            consumer_secret=settings.MPESA_CONSUMER_SECRET,
+            environment=settings.MPESA_ENVIRONMENT
+        )
+
         try:
             response = cl.stk_push(
                 phone_number=phone,
                 amount=int(amount),
                 account_reference=f"Invoice-{payment_request.pk}",
                 transaction_desc="Payment for HomeConnect service",
-                callback_url = request.build_absolute_uri(
-                    # e.g. the endpoint you'll create to handle callbacks
-                    # assumes you have named it 'mpesa_callback'
-                    # adjust accordingly
-                    '/mpesa/callback/'
-                )
+                callback_url=' https://unhonied-salutatorily-christena.ngrok-free.dev/connectmpesa/callback/',
             )
         except Exception as e:
-            # error from daraja client
             return JsonResponse({'status': 'error', 'message': str(e)})
 
-        # Example response handling
+        # Parse response
         resp_data = response.json() if hasattr(response, 'json') else response
 
-        # Optionally: save CheckoutRequestID in payment_request
+        # Save CheckoutRequestID to payment request
         payment_request.checkout_request_id = resp_data.get('CheckoutRequestID')
         payment_request.save()
 
-        # Return JSON to frontend
         return JsonResponse({
             'status': 'ok',
             'checkout_request_id': payment_request.checkout_request_id,
@@ -58,7 +60,7 @@ def start_payment(request):
             'message': resp_data.get('CustomerMessage', 'STK Push sent')
         })
 
-    # GET: render form
+    # GET request: render a simple payment form
     return render(request, 'connectmpesa/start_payment.html', {})
 
 @csrf_exempt

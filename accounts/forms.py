@@ -36,12 +36,12 @@ class UserLoginForm(forms.Form):
 # USER REGISTRATION FORM
 # ------------------------------------------------
 class UserRegistrationForm(forms.ModelForm):
+    # --- Fields (Remain the same) ---
     phone = forms.CharField(
         required=False,
         validators=[phone_validator],
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '2547XXXXXXXX'})
     )
-
     password1 = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}))
     password2 = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}))
 
@@ -54,7 +54,6 @@ class UserRegistrationForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-control'})
     )
 
-    # Only relevant if service_provider
     services = forms.ModelMultipleChoiceField(
         queryset=Service.objects.all(),
         required=False,
@@ -81,19 +80,21 @@ class UserRegistrationForm(forms.ModelForm):
         return cleaned_data
 
     def save(self, commit=True):
+        """
+        Modified: Only saves the User object and sets the password. 
+        The ServiceProvider creation logic is moved to the view for transactional safety.
+        """
         user = super().save(commit=False)
         user.set_password(self.cleaned_data['password1'])
+        
+        # NOTE: If 'user_type' is not a field on your custom User model, 
+        # you need to ensure it's saved somewhere (e.g., on a separate Profile model).
+        # Assuming you've added user_type to your custom User model or are handling it via a Profile model later.
+        
         if commit:
             user.save()
-
-            # If service provider, create profile and assign services
-            if user.user_type == "service_provider":
-                provider_profile = ServiceProvider.objects.create(user=user)
-                services = self.cleaned_data.get("services")
-                if services:
-                    provider_profile.services.set(services)
-                    provider_profile.save()
-
+            # Removed: provider_profile creation logic
+            
         return user
 # ------------------------------------------------
 # USER PROFILE UPDATE FORM

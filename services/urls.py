@@ -6,6 +6,7 @@ app_name = 'services'
 urlpatterns = [
     # Dashboard
     path('', views.homeowner_dashboard, name='dashboard'),
+    path('homeowner/dashboard/',views.homeowner_dashboard, name='homeowner_dashboard'),
     path('provider/dashboard/', views.provider_dashboard, name='provider_dashboard'),
 
     # PROVIDERS

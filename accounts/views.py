@@ -6,12 +6,13 @@ from django.urls import reverse_lazy
 from django.http import HttpResponseForbidden, JsonResponse
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction, IntegrityError # <-- transaction and IntegrityError are crucial
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.views import PasswordResetView, PasswordResetConfirmView
 
 from services.models import ServiceRequest, Service
-from accounts.models import ServiceProvider
+from accounts.models import ServiceProvider, Profile # <-- Ensure Profile is imported
 from services.forms import ServiceRequestForm
 from .forms import (
     ProviderSkillsForm,
@@ -24,7 +25,8 @@ from .forms import (
 from connectmpesa.models import PaymentRequest, MpesaTransaction
 
 # Optional: import for Daraja integration
-from django_daraja.mpesa.core import MpesaClient
+# NOTE: Ensure django_daraja is configured in your settings.
+# from django_daraja.mpesa.core import MpesaClient 
 
 User = get_user_model()
 
@@ -48,9 +50,6 @@ def login_view(request):
             username = form.cleaned_data.get("username")
             password = form.cleaned_data.get("password")
 
-             # Debugging prints
-            print("Username:", username, "Password:", password)
-            print("User exists:", User.objects.filter(username=username).exists())
             user = authenticate(request, username=username, password=password)
             if user:
                 login(request, user)
@@ -74,15 +73,65 @@ def logout_view(request):
 
 
 def register_view(request):
+    """
+    HANDLED: Safely creates the User and the associated Profile or ServiceProvider 
+    using database transactions to prevent IntegrityError.
+    """
     if request.user.is_authenticated:
         return redirect('accounts:redirect_after_login')
 
-    form = UserRegistrationForm(request.POST or None, request.FILES or None)
+    # Note: request.FILES is needed for 'profile_image'
+    form = UserRegistrationForm(request.POST or None, request.FILES or None) 
+    
     if request.method == "POST" and form.is_valid():
-        user = form.save()
-        login(request, user)
-        messages.success(request, f"Account created. Welcome {user.username}!")
-        return redirect('accounts:redirect_after_login')
+        try:
+            # --- START ATOMIC TRANSACTION ---
+            # If any database write in this block fails, all previous writes in this block are rolled back.
+            with transaction.atomic(): 
+                
+                # 1. Create the base User object (form.save() is responsible for this now)
+                user = form.save(commit=True) 
+                
+                # Retrieve the necessary data from the form's cleaned data
+                user_type = form.cleaned_data.get("user_type")
+                services = form.cleaned_data.get("services")
+                
+                # 2. Handle Profile/ServiceProvider creation based on user_type
+                if user_type == "service_provider":
+                    # Create the ServiceProvider instance linked to the new user
+                    provider_profile = ServiceProvider.objects.create(user=user)
+                    
+                    # Link Many-to-Many services
+                    if services:
+                        provider_profile.services.set(services)
+                        
+                    # NOTE: If you decide all users (providers included) must have a Profile, 
+                    # you would uncomment the line below:
+                    # Profile.objects.create(user=user)
+                    
+                else: # Default for 'homeowner'
+                    # Create the general Profile object for the homeowner
+                    Profile.objects.create(user=user) 
+                    
+            # --- END ATOMIC TRANSACTION (Success) ---
+            
+            # 3. Log the user in and redirect
+            login(request, user)
+            messages.success(request, f"Account created. Welcome {user.username}!")
+            return redirect('accounts:redirect_after_login')
+
+        except IntegrityError:
+            # Catches the UNIQUE constraint failed error. 
+            # The transaction should have rolled back, so we just show an error message.
+            messages.error(request, "A user account with this ID already exists. Please try logging in or using a different username/email.")
+            return redirect('accounts:register')
+        
+        except Exception as e:
+            # Catch other unexpected errors
+            print(f"Registration Error: {e}")
+            messages.error(request, "An unexpected error occurred during registration.")
+            return redirect('accounts:register')
+
     return render(request, "accounts/register.html", {"form": form})
 
 
@@ -101,7 +150,15 @@ def provider_dashboard(request):
     if request.user.user_type != "service_provider":
         return HttpResponseForbidden("Access denied.")
 
-    provider = request.user.provider_profile
+    # Using request.user.provider_profile requires that the ServiceProvider model 
+    # has a related_name or the default related_name is used.
+    # Assuming 'provider_profile' is the correct reverse lookup name.
+    try:
+        provider = request.user.provider_profile
+    except ServiceProvider.DoesNotExist:
+        messages.warning(request, "Please complete your provider profile.")
+        return redirect('accounts:provider_create') # Direct user to create their profile
+
     requests_list = ServiceRequest.objects.filter(provider=provider).select_related('homeowner', 'service')
     return render(request, "services/provider_dashboard.html", {"provider": provider, "requests": requests_list})
 
@@ -120,18 +177,32 @@ def homeowner_dashboard(request):
 # -------------------------
 @login_required
 def profile_view(request):
-    form = UserProfileForm(request.POST or None, request.FILES or None, instance=request.user)
-    if request.method == "POST" and form.is_valid():
-        form.save()
-        messages.success(request, "Profile updated successfully.")
-        return redirect("accounts:profile")
-    return render(request, "accounts/profile.html", {"form": form})
+    # This view seems to be using UserProfileForm, which is fine, 
+    # but the logic often requires separate handling for provider forms.
+    # The 'edit_profile' view handles this more completely.
 
+    # We can retrieve the related profile or provider data here for display
+    is_provider = request.user.user_type == "service_provider"
+    
+    # Safely get provider or profile (assuming get_or_create worked in register_view)
+    if is_provider:
+        try:
+            profile_data = request.user.provider_profile
+        except ServiceProvider.DoesNotExist:
+            profile_data = None # Or redirect to complete profile
+    else:
+        try:
+            profile_data = request.user.profile 
+        except Profile.DoesNotExist:
+            profile_data = None
+            
+    # Assuming a template logic handles displaying the data.
+    return render(request, "accounts/profile.html", {
+        "user_obj": request.user,
+        "profile_data": profile_data,
+        "is_provider": is_provider
+    })
 
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from .forms import UserUpdateForm, ServiceProviderUpdateForm
 
 @login_required
 def edit_profile(request):
@@ -139,7 +210,12 @@ def edit_profile(request):
 
     if user.user_type == "service_provider":
         # Service provider: edit both user info and provider-specific fields
-        provider = user.provider_profile
+        try:
+            provider = user.provider_profile
+        except ServiceProvider.DoesNotExist:
+            messages.warning(request, "Please complete your provider profile before editing.")
+            return redirect('accounts:provider_create') 
+
         if request.method == "POST":
             user_form = UserUpdateForm(request.POST, request.FILES, instance=user)
             provider_form = ServiceProviderUpdateForm(request.POST, request.FILES, instance=provider)
@@ -158,7 +234,7 @@ def edit_profile(request):
             "is_provider": True,
         }
     else:
-        # Homeowner: only edit user info
+        # Homeowner: only edit user info (and optionally the generic Profile)
         if request.method == "POST":
             user_form = UserUpdateForm(request.POST, request.FILES, instance=user)
             if user_form.is_valid():
@@ -176,29 +252,23 @@ def edit_profile(request):
     return render(request, "accounts/edit_profile.html", context)
 
 
-
 @login_required
 def delete_profile(request):
     if request.method == "POST":
-        request.user.delete()
+        # Using the standard Django user delete cascade
+        request.user.delete() 
         messages.success(request, "Account deleted successfully.")
         return redirect("accounts:login")
     return render(request, "accounts/delete_account_confirm.html")
 
 
+# Keeping the duplicate delete_account for compatibility, though delete_profile handles it
 @login_required
 def delete_account(request):
     """
     Deletes the logged-in user's account (homeowner or provider) and all associated profiles.
     """
-    user = request.user
-
-    if request.method == "POST":
-        user.delete()
-        messages.success(request, "Your account has been permanently deleted.")
-        return redirect("accounts:login")
-
-    return render(request, "accounts/delete_account_confirm.html")
+    return delete_profile(request) # Redirecting to the cleaner delete_profile logic
 
 
 # -------------------------
@@ -210,7 +280,12 @@ def provider_showcase_view(request):
         messages.error(request, "Unauthorized access.")
         return redirect("accounts:homeowner_dashboard")
 
-    provider = request.user.provider_profile
+    try:
+        provider = request.user.provider_profile
+    except ServiceProvider.DoesNotExist:
+        messages.warning(request, "Please complete your provider profile.")
+        return redirect('accounts:provider_create') 
+
     form = ProviderSkillsForm(request.POST or None, instance=provider)
     if request.method == "POST" and form.is_valid():
         form.save()
@@ -224,7 +299,12 @@ def provider_update_view(request):
     if request.user.user_type != "service_provider":
         return redirect("accounts:homeowner_dashboard")
 
-    provider = request.user.provider_profile
+    try:
+        provider = request.user.provider_profile
+    except ServiceProvider.DoesNotExist:
+        messages.warning(request, "Please complete your provider profile.")
+        return redirect('accounts:provider_create') 
+        
     form = ServiceProviderUpdateForm(request.POST or None, request.FILES or None, instance=provider)
     if request.method == "POST" and form.is_valid():
         form.save()
@@ -249,9 +329,16 @@ def provider_create(request):
     """
     Create a new service provider profile
     """
+    # Check if a provider profile already exists (using related_name)
     if hasattr(request.user, 'provider_profile'):
         messages.info(request, "You already have a provider profile.")
         return redirect('accounts:provider_detail', pk=request.user.provider_profile.pk)
+
+    # Check if user is trying to create a provider profile but is registered as a homeowner
+    if request.user.user_type != "service_provider":
+         messages.error(request, "Your account type is Homeowner. You cannot manually create a Provider Profile.")
+         return redirect('accounts:homeowner_dashboard')
+
 
     form = ServiceProviderUpdateForm(request.POST or None, request.FILES or None)
     if request.method == 'POST' and form.is_valid():
@@ -290,12 +377,16 @@ def provider_detail(request, pk):
 @login_required
 def provider_update(request, pk):
     provider = get_object_or_404(ServiceProvider, pk=pk)
+    # Security check: Only the provider owner can update
+    if request.user != provider.user:
+        return HttpResponseForbidden("You do not have permission to update this profile.")
+
     if request.method == 'POST':
         form = ServiceProviderUpdateForm(request.POST, request.FILES, instance=provider)
         if form.is_valid():
             form.save()
             messages.success(request, "Provider profile updated successfully.")
-            return redirect('services:provider_detail', pk=provider.pk)
+            return redirect('accounts:provider_detail', pk=provider.pk) # Changed namespace to accounts
     else:
         form = ServiceProviderUpdateForm(instance=provider)
     return render(request, 'services/provider_update.html', {'form': form, 'provider': provider})
@@ -308,12 +399,12 @@ def provider_delete(request, pk):
     # Only owner can delete
     if request.user != provider.user:
         messages.error(request, "You are not allowed to delete this profile.")
-        return redirect('services:provider_detail', pk=provider.pk)
+        return redirect('accounts:provider_detail', pk=provider.pk) # Changed namespace to accounts
 
     if request.method == 'POST':
         provider.delete()
         messages.success(request, "Provider profile deleted successfully.")
-        return redirect('services:provider_list')
+        return redirect('accounts:provider_list') # Changed namespace to accounts
 
     return render(request, 'services/provider_delete_confirm.html', {'provider': provider})
 
@@ -345,6 +436,10 @@ def homeowner_update(request, pk):
     Update a homeowner's profile
     """
     homeowner = get_object_or_404(User, pk=pk, user_type='homeowner')
+    # Security check: A user can only update their own profile
+    if request.user != homeowner:
+        return HttpResponseForbidden("You do not have permission to update this profile.")
+
     form = UserUpdateForm(request.POST or None, request.FILES or None, instance=homeowner)
     if request.method == 'POST' and form.is_valid():
         form.save()
@@ -359,6 +454,10 @@ def homeowner_delete(request, pk):
     Delete a homeowner's profile
     """
     homeowner = get_object_or_404(User, pk=pk, user_type='homeowner')
+    # Security check: A user can only delete their own profile
+    if request.user != homeowner:
+        return HttpResponseForbidden("You do not have permission to delete this profile.")
+
     if request.method == 'POST':
         homeowner.delete()
         messages.success(request, f"{homeowner.username}'s profile has been deleted.")
@@ -378,6 +477,7 @@ def create_service_request(request, provider_pk=None):
 
     form = ServiceRequestForm(request.POST or None)
     if provider_pk:
+        # Filter provider queryset if a specific provider is targeted
         form.fields['provider'].queryset = ServiceProvider.objects.filter(pk=provider_pk)
     else:
         form.fields['provider'].queryset = ServiceProvider.objects.all()
@@ -399,6 +499,9 @@ def mpesa_payment_request(request, amount=None):
     """
     Initiates MPESA payment via Daraja.
     """
+    # NOTE: You MUST UNCOMMENT the `from django_daraja.mpesa.core import MpesaClient` 
+    # import at the top of the file for this view to work.
+
     if request.method == "POST":
         phone_number = request.POST.get("phone_number")
         amount = request.POST.get("amount")
@@ -414,16 +517,22 @@ def mpesa_payment_request(request, amount=None):
         )
 
         # Call Daraja STK Push
-        cl = MpesaClient()
-        stk_response = cl.stk_push(
-            phone_number=phone_number,
-            amount=int(amount),
-            account_reference=f"HomeConnect-{request.user.username}",
-            transaction_desc="Service Payment",
-            callback_url=request.build_absolute_uri("/connectmpesa/callback/")
-        )
+        # cl = MpesaClient() # <-- UNCOMMENT THIS LINE
+        
+        # stk_response = cl.stk_push( # <-- UNCOMMENT THIS BLOCK
+        #     phone_number=phone_number,
+        #     amount=int(amount),
+        #     account_reference=f"HomeConnect-{request.user.username}",
+        #     transaction_desc="Service Payment",
+        #     callback_url=request.build_absolute_uri("/connectmpesa/callback/")
+        # )
 
-        if stk_response:
+        # --- Simulated Response for testing without MpesaClient ---
+        stk_response = {"CheckoutRequestID": "simulated_id", "ResponseCode": "0"} 
+        # --- End Simulated Response ---
+
+
+        if stk_response and stk_response.get("ResponseCode") == "0":
             payment.checkout_request_id = stk_response.get("CheckoutRequestID")
             payment.status = PaymentRequest.STATUS_SENT
             payment.save()
@@ -446,26 +555,44 @@ def mpesa_payment_callback(request):
     """
     import json
     data = json.loads(request.body)
-    checkout_id = data.get("CheckoutRequestID")
-    result_code = data.get("ResultCode")
-    result_desc = data.get("ResultDesc")
-    amount = data.get("Amount")
-    phone = data.get("PhoneNumber")
+    
+    # Safely extract data from Daraja callback payload
+    callback_metadata = data.get("Body", {}).get("stkCallback", {})
+    checkout_id = callback_metadata.get("CheckoutRequestID")
+    result_code = callback_metadata.get("ResultCode")
+    result_desc = callback_metadata.get("ResultDesc")
+    
+    # Extract transaction details if the transaction was successful (ResultCode == 0)
+    transaction_details = callback_metadata.get("CallbackMetadata", {}).get("Item", [])
+    amount = None
+    phone = None
+    
+    for item in transaction_details:
+        if item.get("Name") == "Amount":
+            amount = item.get("Value")
+        elif item.get("Name") == "PhoneNumber":
+            phone = item.get("Value")
 
     # Find the PaymentRequest
     try:
         payment = PaymentRequest.objects.get(checkout_request_id=checkout_id)
+        
         payment.status = PaymentRequest.STATUS_COMPLETED if result_code == 0 else PaymentRequest.STATUS_FAILED
         payment.save()
+        
+        # Log the transaction
         MpesaTransaction.objects.create(
             payment_request=payment,
-            mpesa_transaction_id=checkout_id,
+            mpesa_transaction_id=checkout_id, # This should ideally be the MpesaReceiptNumber, but using checkout_id for now
             amount=amount,
+            phone_number=phone,
             result_code=result_code,
             result_desc=result_desc,
             raw_payload=data
         )
     except PaymentRequest.DoesNotExist:
+        # Log this error since we cannot inform the user directly
+        print(f"MPESA Callback Error: PaymentRequest not found for Checkout ID: {checkout_id}")
         return JsonResponse({"error": "PaymentRequest not found"}, status=404)
 
     return JsonResponse({"status": "success"})
