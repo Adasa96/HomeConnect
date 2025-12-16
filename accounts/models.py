@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.conf import settings
 from django.dispatch import receiver
 from django.db.models.signals import post_save
+from cloudinary.models import CloudinaryField
 
 
 # -------------------------------------------------------
@@ -35,6 +36,7 @@ class Profile(models.Model):
         on_delete=models.CASCADE,
         related_name="profile"
     )
+    phone = models.CharField(max_length=20, blank=True, null=True)
     bio = models.TextField(blank=True, null=True)
     profile_image = models.ImageField(
         upload_to="profile_images/",
@@ -43,6 +45,7 @@ class Profile(models.Model):
     )
 
     location = models.CharField(max_length=150, blank=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
 
     def __str__(self):
         return f"{self.user.username} Profile"

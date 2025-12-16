@@ -42,6 +42,8 @@ urlpatterns = [
     path('profile/', views.profile_view, name='profile'),
     path('profile/edit/', views.edit_profile, name='edit_profile'),
     path('profile/delete/', views.delete_profile, name='delete_profile'),
+    path('homeowner/profile/', views.homeowner_profile_view, name='homeowner_profile'),
+    path('provider/profile/', views.provider_profile_view, name='provider_profile'),
     path('delete/', views.delete_account, name='delete_account'),
 
 

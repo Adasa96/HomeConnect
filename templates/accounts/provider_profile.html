@@ -1,34 +1,32 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Profile — HomeConnect{% endblock %}
+{% block title %}Edit Profile — HomeConnect{% endblock %}
 
 {% block content %}
 <div class="container">
   <div class="row justify-content-center">
     <div class="col-md-8">
 
-      <!-- TOP ACTIONS -->
+      <!-- Header Buttons -->
       <div class="d-flex justify-content-between mb-3">
         <a href="{% url 'services:dashboard' %}" class="btn btn-secondary btn-sm">
           ← Back to Dashboard
         </a>
-        <a href="{% url 'accounts:delete_account' %}"
-           class="btn btn-danger btn-sm"
+        <a href="{% url 'accounts:delete_account' %}" class="btn btn-danger btn-sm"
            onclick="return confirm('Are you sure you want to delete your account? This action is permanent.');">
           Delete Account
         </a>
       </div>
 
-      <!-- PROFILE CARD -->
+      <!-- Profile Card -->
       <div class="card shadow-sm">
         <div class="row g-0">
 
-          <!-- LEFT: PROFILE PHOTO -->
+          <!-- Left: Profile Photo -->
           <div class="col-md-4 border-end d-flex flex-column align-items-center justify-content-center p-4 text-center">
-
-            {% if form.instance.profile_photo %}
-              <img src="{{ form.instance.profile_photo.url }}"
+            {% if form.instance.profile_image %}
+              <img src="{{ form.instance.profile_image.url }}"
                    alt="Profile Photo"
                    class="rounded-circle mb-3"
                    style="width:150px;height:150px;object-fit:cover;">
@@ -38,22 +36,19 @@
                    class="rounded-circle mb-3"
                    style="width:150px;height:150px;object-fit:cover;">
             {% endif %}
-
             <strong class="mt-2">{{ request.user.username }}</strong>
-            <small class="text-muted">Account Profile</small>
-
+            <small class="text-muted">Service Provider Profile</small>
           </div>
 
-          <!-- RIGHT: PROFILE FORM -->
+          <!-- Right: Profile Form -->
           <div class="col-md-8">
             <div class="card-body">
-
-              <h4 class="card-title mb-3">Edit Profile</h4>
+              <h4 class="card-title mb-3">Edit Your Profile</h4>
 
               <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
 
-                <!-- ALL EXISTING PROFILE FIELDS -->
+                <!-- Render all fields from the form -->
                 {{ form.as_p }}
 
                 <div class="d-flex mt-4">
@@ -64,7 +59,6 @@
                     Cancel
                   </a>
                 </div>
-
               </form>
 
             </div>

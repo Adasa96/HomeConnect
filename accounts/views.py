@@ -21,6 +21,7 @@ from .forms import (
     UserProfileForm,
     ServiceProviderUpdateForm,
     UserUpdateForm,
+    ProfileForm,
 )
 from connectmpesa.models import PaymentRequest, MpesaTransaction
 
@@ -596,6 +597,32 @@ def mpesa_payment_callback(request):
         return JsonResponse({"error": "PaymentRequest not found"}, status=404)
 
     return JsonResponse({"status": "success"})
+
+@login_required
+def homeowner_profile_view(request):
+    profile = request.user.profile
+    if request.method == 'POST':
+        form = UserProfileForm(request.POST, request.FILES, instance=request.user, profile=profile)
+        if form.is_valid():
+            form.save()
+            return redirect('services:dashboard')
+    else:
+        form = UserProfileForm(instance=request.user, profile=profile)
+
+    return render(request, 'accounts/homeowner_profile.html', {'form': form})
+
+@login_required
+def provider_profile_view(request):
+    profile = request.user.provider_profile  # assumes OneToOneField User -> ProviderProfile
+    if request.method == 'POST':
+        form = ProfileForm(request.POST, request.FILES, instance=profile)
+        if form.is_valid():
+            form.save()
+            return redirect('accounts:dashboard')
+    else:
+        form = ProfileForm(instance=profile)
+
+    return render(request, 'accounts/provider_profile.html', {'form': form})
 
 
 # -------------------------

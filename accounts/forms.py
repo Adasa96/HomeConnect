@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 
-from .models import ServiceProvider, User
+from .models import ServiceProvider, User,Profile
 from services.models import Service
 
 User = get_user_model()
@@ -100,17 +100,41 @@ class UserRegistrationForm(forms.ModelForm):
 # USER PROFILE UPDATE FORM
 # ------------------------------------------------
 class UserProfileForm(forms.ModelForm):
+    phone = forms.CharField(required=False)
+    location = forms.CharField(required=False)
+    city = forms.CharField(required=False)
+    bio = forms.CharField(widget=forms.Textarea(attrs={'rows':3}), required=False)
+    profile_image = forms.ImageField(required=False)
+
     class Meta:
         model = User
-        fields = ('username', 'email', 'phone', 'location', 'city', 'bio', 'profile_image')
-        widgets = {
-            'username': forms.TextInput(attrs={'class': 'form-control'}),
-            'email': forms.EmailInput(attrs={'class': 'form-control'}),
-            'phone': forms.TextInput(attrs={'class': 'form-control'}),
-            'location': forms.TextInput(attrs={'class': 'form-control'}),
-            'city': forms.TextInput(attrs={'class': 'form-control'}),
-            'bio': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-        }
+        fields = ('username', 'email', 'first_name', 'last_name')
+
+    def __init__(self, *args, **kwargs):
+        profile = kwargs.pop('profile', None)
+        super().__init__(*args, **kwargs)
+        if profile:
+            self.fields['phone'].initial = profile.phone
+            self.fields['location'].initial = profile.location
+            self.fields['city'].initial = profile.city
+            self.fields['bio'].initial = profile.bio
+            self.fields['profile_image'].initial = profile.profile_image
+
+        for field in self.fields.values():
+            field.widget.attrs['class'] = 'form-control'
+
+    def save(self, commit=True):
+        user = super().save(commit=commit)
+        profile = user.profile  # assumes OneToOneField from User to Profile
+        profile.phone = self.cleaned_data.get('phone')
+        profile.location = self.cleaned_data.get('location')
+        profile.city = self.cleaned_data.get('city')
+        profile.bio = self.cleaned_data.get('bio')
+        if self.cleaned_data.get('profile_image'):
+            profile.profile_image = self.cleaned_data.get('profile_image')
+        if commit:
+            profile.save()
+        return user
 
 
 # ------------------------------------------------
@@ -191,3 +215,15 @@ class UserUpdateForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ['username', 'email', 'first_name', 'last_name']
+
+class ProfileForm(forms.ModelForm):
+    class Meta:
+        model = Profile   # ← THIS is the fix
+        fields = ('phone', 'location', 'city', 'bio', 'profile_image')
+        widgets = {
+            'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'location': forms.TextInput(attrs={'class': 'form-control'}),
+            'city': forms.TextInput(attrs={'class': 'form-control'}),
+            'bio': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+

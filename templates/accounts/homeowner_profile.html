@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Edit Profile — HomeConnect{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+
+      <!-- Header Buttons -->
+      <div class="d-flex justify-content-between mb-3">
+        <a href="{% url 'services:dashboard' %}" class="btn btn-secondary btn-sm">
+          ← Back to Dashboard
+        </a>
+        <a href="{% url 'accounts:delete_account' %}" class="btn btn-danger btn-sm"
+           onclick="return confirm('Are you sure you want to delete your account? This action is permanent.');">
+          Delete Account
+        </a>
+      </div>
+
+      <!-- Profile Card -->
+      <div class="card shadow-sm">
+        <div class="row g-0">
+
+          <!-- Left: Profile Photo -->
+          <div class="col-md-4 border-end d-flex flex-column align-items-center justify-content-center p-4 text-center">
+            {% if form.instance.profile_image %}
+              <img src="{{ form.instance.profile_image.url }}"
+                   alt="Profile Photo"
+                   class="rounded-circle mb-3"
+                   style="width:150px;height:150px;object-fit:cover;">
+            {% else %}
+              <img src="{% static 'img/default_avatar.svg' %}"
+                   alt="Default Avatar"
+                   class="rounded-circle mb-3"
+                   style="width:150px;height:150px;object-fit:cover;">
+            {% endif %}
+            <strong class="mt-2">{{ request.user.username }}</strong>
+            <small class="text-muted">Homeowner Profile</small>
+          </div>
+
+          <!-- Right: Profile Form -->
+          <div class="col-md-8">
+            <div class="card-body">
+              <h4 class="card-title mb-3">Edit Your Profile</h4>
+
+              <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <!-- User Fields -->
+                <div class="mb-3">
+                  {{ form.username.label_tag }} {{ form.username }}
+                </div>
+                <div class="mb-3">
+                  {{ form.email.label_tag }} {{ form.email }}
+                </div>
+                <div class="mb-3">
+                  {{ form.first_name.label_tag }} {{ form.first_name }}
+                </div>
+                <div class="mb-3">
+                  {{ form.last_name.label_tag }} {{ form.last_name }}
+                </div>
+
+                <!-- Profile Fields -->
+                <div class="mb-3">
+                  {{ form.phone.label_tag }} {{ form.phone }}
+                </div>
+                <div class="mb-3">
+                  {{ form.location.label_tag }} {{ form.location }}
+                </div>
+                <div class="mb-3">
+                  {{ form.city.label_tag }} {{ form.city }}
+                </div>
+                <div class="mb-3">
+                  {{ form.bio.label_tag }} {{ form.bio }}
+                </div>
+                <div class="mb-3">
+                  {{ form.profile_image.label_tag }} {{ form.profile_image }}
+                </div>
+
+                <!-- Buttons -->
+                <div class="d-flex mt-4">
+                  <button type="submit" class="btn btn-success me-2">Save Changes</button>
+                  <a href="{% url 'services:dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+
+              </form>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
