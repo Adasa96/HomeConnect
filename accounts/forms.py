@@ -1,5 +1,5 @@
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.forms import AuthenticationForm, UserChangeForm
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
@@ -211,11 +211,16 @@ class ServiceProviderUpdateForm(forms.ModelForm):
 # ------------------------------------------------
 # GENERAL USER UPDATE FORM
 # ------------------------------------------------
-class UserUpdateForm(forms.ModelForm):
+class UserUpdateForm(UserChangeForm):
+    password = None  # Hide password field in the edit form
+
     class Meta:
         model = User
-        fields = ['username', 'email', 'first_name', 'last_name']
-
+        fields = [
+            'username', 'email', 'first_name', 'last_name',
+            'user_type', 'bio', 'profile_image',
+            'phone', 'location', 'city',
+        ]
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = Profile   # ← THIS is the fix

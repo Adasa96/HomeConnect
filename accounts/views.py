@@ -178,30 +178,39 @@ def homeowner_dashboard(request):
 # -------------------------
 @login_required
 def profile_view(request):
-    # This view seems to be using UserProfileForm, which is fine, 
-    # but the logic often requires separate handling for provider forms.
-    # The 'edit_profile' view handles this more completely.
+    user = request.user
+    is_provider = user.user_type == "service_provider"
 
-    # We can retrieve the related profile or provider data here for display
-    is_provider = request.user.user_type == "service_provider"
-    
-    # Safely get provider or profile (assuming get_or_create worked in register_view)
+    # Get provider/profile data safely
+    profile_data = None
     if is_provider:
         try:
-            profile_data = request.user.provider_profile
+            profile_data = user.provider_profile
         except ServiceProvider.DoesNotExist:
-            profile_data = None # Or redirect to complete profile
+            profile_data = None
     else:
         try:
-            profile_data = request.user.profile 
+            profile_data = user.profile
         except Profile.DoesNotExist:
             profile_data = None
-            
-    # Assuming a template logic handles displaying the data.
+
+    # Handle the form for editing
+    if request.method == "POST":
+        form = UserUpdateForm(request.POST, request.FILES, instance=user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Your profile has been updated.")
+            return redirect("accounts:profile")  # reload page
+        else:
+            messages.error(request, "Please fix the errors below.")
+    else:
+        form = UserUpdateForm(instance=user)
+
     return render(request, "accounts/profile.html", {
-        "user_obj": request.user,
+        "user_obj": user,
         "profile_data": profile_data,
-        "is_provider": is_provider
+        "is_provider": is_provider,
+        "form": form,  # <-- pass the form to the template
     })
 
 
@@ -209,50 +218,18 @@ def profile_view(request):
 def edit_profile(request):
     user = request.user
 
-    if user.user_type == "service_provider":
-        # Service provider: edit both user info and provider-specific fields
-        try:
-            provider = user.provider_profile
-        except ServiceProvider.DoesNotExist:
-            messages.warning(request, "Please complete your provider profile before editing.")
-            return redirect('accounts:provider_create') 
-
-        if request.method == "POST":
-            user_form = UserUpdateForm(request.POST, request.FILES, instance=user)
-            provider_form = ServiceProviderUpdateForm(request.POST, request.FILES, instance=provider)
-            if user_form.is_valid() and provider_form.is_valid():
-                user_form.save()
-                provider_form.save()
-                messages.success(request, "Profile updated successfully!")
-                return redirect("accounts:profile")
+    if request.method == 'POST':
+        form = UserUpdateForm(request.POST, request.FILES, instance=user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Your profile has been updated.')
+            return redirect('accounts:profile')  # redirect to profile page
         else:
-            user_form = UserUpdateForm(instance=user)
-            provider_form = ServiceProviderUpdateForm(instance=provider)
-
-        context = {
-            "user_form": user_form,
-            "provider_form": provider_form,
-            "is_provider": True,
-        }
+            messages.error(request, 'Please correct the errors below.')
     else:
-        # Homeowner: only edit user info (and optionally the generic Profile)
-        if request.method == "POST":
-            user_form = UserUpdateForm(request.POST, request.FILES, instance=user)
-            if user_form.is_valid():
-                user_form.save()
-                messages.success(request, "Profile updated successfully!")
-                return redirect("accounts:profile")
-        else:
-            user_form = UserUpdateForm(instance=user)
+        form = UserUpdateForm(instance=user)
 
-        context = {
-            "user_form": user_form,
-            "is_provider": False,
-        }
-
-    return render(request, "accounts/edit_profile.html", context)
-
-
+    return render(request, 'accounts/edit_profile.html', {'form': form})
 @login_required
 def delete_profile(request):
     if request.method == "POST":

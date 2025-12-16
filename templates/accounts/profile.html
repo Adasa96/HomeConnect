@@ -4,76 +4,83 @@
 {% block title %}Profile — HomeConnect{% endblock %}
 
 {% block content %}
-<div class="container">
-  <div class="row justify-content-center">
-    <div class="col-md-8">
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
 
-      <!-- TOP ACTIONS -->
-      <div class="d-flex justify-content-between mb-3">
-        <a href="{% url 'services:dashboard' %}" class="btn btn-secondary btn-sm">
-          ← Back to Dashboard
-        </a>
-        <a href="{% url 'accounts:delete_account' %}"
-           class="btn btn-danger btn-sm"
-           onclick="return confirm('Are you sure you want to delete your account? This action is permanent.');">
-          Delete Account
-        </a>
-      </div>
-
-      <!-- PROFILE CARD -->
-      <div class="card shadow-sm">
-        <div class="row g-0">
-
-          <!-- LEFT: PROFILE PHOTO -->
-          <div class="col-md-4 border-end d-flex flex-column align-items-center justify-content-center p-4 text-center">
-
-            {% if form.instance.profile_photo %}
-              <img src="{{ form.instance.profile_photo.url }}"
-                   alt="Profile Photo"
-                   class="rounded-circle mb-3"
-                   style="width:150px;height:150px;object-fit:cover;">
-            {% else %}
-              <img src="{% static 'img/default_avatar.svg' %}"
-                   alt="Default Avatar"
-                   class="rounded-circle mb-3"
-                   style="width:150px;height:150px;object-fit:cover;">
-            {% endif %}
-
-            <strong class="mt-2">{{ request.user.username }}</strong>
-            <small class="text-muted">Account Profile</small>
-
-          </div>
-
-          <!-- RIGHT: PROFILE FORM -->
-          <div class="col-md-8">
-            <div class="card-body">
-
-              <h4 class="card-title mb-3">Edit Profile</h4>
-
-              <form method="post" enctype="multipart/form-data">
-                {% csrf_token %}
-
-                <!-- ALL EXISTING PROFILE FIELDS -->
-                {{ form.as_p }}
-
-                <div class="d-flex mt-4">
-                  <button type="submit" class="btn btn-success me-2">
-                    Save Changes
-                  </button>
-                  <a href="{% url 'services:dashboard' %}" class="btn btn-outline-secondary">
-                    Cancel
-                  </a>
-                </div>
-
-              </form>
-
+            <!-- Top Actions -->
+            <div class="d-flex justify-content-between mb-4">
+                <a href="{% url 'services:dashboard' %}" class="btn btn-outline-secondary btn-sm">← Back to Dashboard</a>
+                <a href="{% url 'accounts:delete_account' %}" 
+                   class="btn btn-danger btn-sm"
+                   onclick="return confirm('Are you sure you want to delete your account? This action is permanent.');">
+                   Delete Account
+                </a>
             </div>
-          </div>
+
+            <div class="card shadow-sm">
+                <div class="row g-0">
+
+                    <!-- LEFT: Profile Info -->
+                    <div class="col-md-4 border-end p-4 bg-light text-center">
+                        {% if request.user.profile_image %}
+                            <img src="{{ request.user.profile_image.url }}" 
+                                 alt="Profile Image" 
+                                 class="rounded-circle mb-3" 
+                                 style="width:150px;height:150px;object-fit:cover;">
+                        {% else %}
+                            <img src="{% static 'img/default_avatar.svg' %}" 
+                                 alt="Default Avatar" 
+                                 class="rounded-circle mb-3" 
+                                 style="width:150px;height:150px;object-fit:cover;">
+                        {% endif %}
+
+                        <h5 class="mt-2">{{ request.user.username }}</h5>
+                        <small class="text-muted">Homeowner Profile</small>
+
+                        <hr class="w-100 mt-3">
+
+                        <p><strong>Full Name:</strong> {{ request.user.first_name }} {{ request.user.last_name }}</p>
+                        <p><strong>Email:</strong> {{ request.user.email }}</p>
+                        {% if request.user.phone %}<p><strong>Phone:</strong> {{ request.user.phone }}</p>{% endif %}
+                        {% if request.user.location or request.user.city %}<p><strong>Location:</strong> {{ request.user.location }}, {{ request.user.city }}</p>{% endif %}
+                        {% if request.user.bio %}<p><strong>Bio:</strong> {{ request.user.bio }}</p>{% endif %}
+                    </div>
+
+                    <!-- RIGHT: Edit Form -->
+                    <div class="col-md-8 p-4">
+                        <h4 class="mb-3">Edit Profile</h4>
+
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            {{ form.as_p }}
+
+                            <div class="d-flex mt-3">
+                                <button type="submit" class="btn btn-success me-2">Save Changes</button>
+                                <a href="{% url 'services:dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+                            </div>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
 
         </div>
-      </div>
-
     </div>
-  </div>
 </div>
 {% endblock %}
+
+<style>
+/* Smooth rounded fields */
+.card-body form .form-control {
+    border-radius: 0.375rem;
+}
+
+/* Optional: make left info column sticky for longer forms */
+@media (min-width: 768px) {
+    .col-md-4.border-end {
+        position: sticky;
+        top: 20px;
+    }
+}
+</style>
